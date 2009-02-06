@@ -19,7 +19,9 @@ The test_drv.erl code provides a simplistic test of the Erlang port driver code.
 BUILDING
 -------------------------------------------------
 
-Some of the newer features in test_drv.cpp require erts >= 5.6
+Some of the newer features in test_drv.cpp require erts >= 5.6.
+Boost is required for the preprocessor macro expansion code
+(http://www.boost.org/).
 
 ./make.sh
 
