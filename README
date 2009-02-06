@@ -1,0 +1,65 @@
+GENERIC ERLANG PORT DRIVER (GEPD), VERSION 0.5 (Feb 6 2009)
+
+PURPOSE
+-------------------------------------------------
+I thought it would be nice to automatically generate an Erlang port driver
+for C/C++ bindings using a single self-contained file.
+
+test_drv.cpp provides:
+
+- a function binding with only a single line tuple
+- efficient passing of function types with no intermediate character buffer
+- functionality like the Erlang Driver Tool Kit (EDTK) (no fd handling though)
+- macro expansion to avoid code duplication errors
+- floating point type handling
+
+The test_drv.erl code provides a simplistic test of the Erlang port driver code.
+
+
+BUILDING
+-------------------------------------------------
+
+Some of the newer features in test_drv.cpp require erts >= 5.6
+
+./make.sh
+
+
+RUNNING
+-------------------------------------------------
+
+The test_drv bindings should generate output similar to:
+
+prompt$ erl +A 16
+Erlang (BEAM) emulator version 5.6.5 [source] [64-bit] [smp:4] [async-threads:16] [kernel-poll:false]
+
+Eshell V5.6.5  (abort with ^G)
+1> test_drv:start().
+<0.34.0>
+2> test_drv:test(). 
+sync call done
+async call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+sync call done
+ok
+5> test_drv:stop().   
+stop
+6> q().
+
+
+LICENSE
+-------------------------------------------------
+test_drv.cpp is under the BSD license
+
+
+CONTACT
+-------------------------------------------------
+Michael Truog (mjtruog (at) gmail (dot) com)
+
