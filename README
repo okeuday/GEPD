@@ -1,25 +1,43 @@
-GENERIC ERLANG PORT DRIVER (GEPD), VERSION 0.5 (Feb 6 2009)
+GENERIC ERLANG PORT [DRIVER] (GEP[D]), VERSION 0.6 (Feb 15 2009)
 
 PURPOSE
 -------------------------------------------------
-I thought it would be nice to automatically generate an Erlang port driver
+To automatically generate an Erlang port driver or Erlang port
 for C/C++ bindings using a single self-contained file.
 
-test_drv.cpp provides:
+Files:
+test_bindings.h contains the ONLY configuration to support the C functions in
+    test_functions.h and test_functions.c
 
+test_bindings.erl provides the gen_server to manage the port or port driver
+erlang_functions_hrl.h creates the erlang function interface
+port_driver.cpp and port_driver.h provide the Erlang port driver implementation
+port.cpp and port.h provide the Erlang port implementation
+
+Whether PORT_DRIVER_NAME_PREFIX or PORT_NAME_PREFIX is defined determines
+if a port driver or port is built, respectively (in test_bindings.h).
+If both are defined, a port driver is built.
+
+Features:
 - a function binding with only a single line tuple
 - efficient passing of function types with no intermediate character buffer
 - functionality like the Erlang Driver Tool Kit (EDTK) (no fd handling though)
 - macro expansion to avoid code duplication errors
 - floating point type handling
 
-The test_drv.erl code provides a simplistic test of the Erlang port driver code.
+Caveat:
+The generated port driver code can not be used for hot code updating
+because it uses the async thread pool, which locks the driver
+(making it "permanent") with driver_lock_driver()
+(http://erlang.org/doc/man/erl_driver.html#driver_lock_driver).
+With the driver locked, there is no possibility that an async
+operation would create instability after a hot code update.
 
 
 BUILDING
 -------------------------------------------------
 
-Some of the newer features in test_drv.cpp require erts >= 5.6.
+Some of the newer features in port_driver.cpp require erts >= 5.6.
 Boost is required for the preprocessor macro expansion code
 (http://www.boost.org/).
 
@@ -29,39 +47,29 @@ Boost is required for the preprocessor macro expansion code
 RUNNING
 -------------------------------------------------
 
-The test_drv bindings should generate output similar to:
+The test_bindings code should generate output similar to:
 
-prompt$ erl +A 16
+$ erl +A 16
 Erlang (BEAM) emulator version 5.6.5 [source] [64-bit] [smp:4] [async-threads:16] [kernel-poll:false]
-
 Eshell V5.6.5  (abort with ^G)
-1> test_drv:start().
-<0.34.0>
-2> test_drv:test(). 
-sync call done
-async call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
-sync call done
+1> test_bindings:start().
+{ok,<0.34.0>}
+2> test_bindings:test(). 
+sync sleep
+async sleep
+...
 ok
-5> test_drv:stop().   
-stop
-6> q().
+3> 
+async function call returned: ok
+3> 
 
 
 LICENSE
 -------------------------------------------------
-test_drv.cpp is under the BSD license
+BSD license
 
 
 CONTACT
 -------------------------------------------------
-Michael Truog (mjtruog (at) gmail (dot) com)
+Michael Truog <mjtruog at gmail dot com>
 

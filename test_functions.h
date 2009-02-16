@@ -1,5 +1,5 @@
-#ifndef TEST_DRV_FUNCS_H
-#define TEST_DRV_FUNCS_H
+#ifndef TEST_FUNCTIONS_H
+#define TEST_FUNCTIONS_H
 
 #include <stdint.h>
 #include <time.h>
@@ -18,5 +18,8 @@ int32_t integer_test2(int8_t size1, int16_t size2,
                       int32_t size4, int64_t size8);
 uint32_t integer_test3(uint8_t size1, uint16_t size2,
                        uint32_t size4, uint64_t size8);
+char * pchar_test2(char * p1, uint32_t l1, char c1,
+                   char * p2, uint32_t l2, char c2,
+                   char * p3, uint32_t l3, char c3);
 
-#endif // TEST_DRV_FUNCS_H
+#endif // TEST_FUNCTIONS_H

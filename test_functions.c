@@ -1,4 +1,4 @@
-#include "test_drv_funcs.h"
+#include "test_functions.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -61,5 +61,20 @@ uint32_t integer_test3(uint8_t size1, uint16_t size2,
                        uint32_t size4, uint64_t size8)
 {
     return size1 + size2 + size4 + (size8 & 0xffffffff);
+}
+
+static char pchar_test2_data[128];
+char * pchar_test2(char * p1, uint32_t l1, char c1,
+                   char * p2, uint32_t l2, char c2,
+                   char * p3, uint32_t l3, char c3)
+{
+    memcpy(&pchar_test2_data[0], p1, l1);
+    pchar_test2_data[l1] = c1;
+    memcpy(&pchar_test2_data[l1 + 1], p2, l2);
+    pchar_test2_data[l1 + l2 + 1] = c2;
+    memcpy(&pchar_test2_data[l1 + l2 + 2], p3, l3);
+    pchar_test2_data[l1 + l2 + l3 + 2] = c3;
+    pchar_test2_data[l1 + l2 + l3 + 3] = '\0';
+    return pchar_test2_data;
 }
 
