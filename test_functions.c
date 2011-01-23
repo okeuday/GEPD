@@ -7,8 +7,18 @@
 #include <stdio.h>
 
 // test asynchronous/synchronous call mechanism (and a void return value)
-void sleep_test1(uint32_t arg) { sleep(arg); }
-void sleep_test2(uint32_t arg) { sleep(arg); }
+void sleep_test1(uint32_t arg)
+{
+    sleep(arg);
+}
+
+void sleep_test2(uint32_t arg)
+{
+    fprintf(stdout, "stdout writing before %d second sleep\n", arg);
+    sleep(arg);
+    fprintf(stdout, "stdout writing after %d second sleep\n", arg);
+    fprintf(stderr, "stderr\nline\nbreak(s)\nmissing");
+}
 
 uint64_t integer_test1()
 {

@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT DRIVER VERSION 0.6
+// GENERIC ERLANG PORT DRIVER VERSION 0.7
 // automatically create efficient Erlang bindings to C++/C 
 
 //////////////////////////////////////////////////////////////////////////////
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,116 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //////////////////////////////////////////////////////////////////////////////
-#include "port_driver.h"
+
+#include <erl_driver.h>
+#include <stdint.h>
+#include <errno.h>
+#include <cstring>
+
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/tuple/to_seq.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/seq/for_each_i.hpp>
+#include <boost/preprocessor/seq/transform.hpp>
+#include <boost/preprocessor/seq/size.hpp>
+#include <boost/preprocessor/repetition/enum.hpp>
+#include <boost/preprocessor/repetition/repeat_from_to.hpp>
+#include <boost/preprocessor/punctuation/comma.hpp>
+#include <boost/preprocessor/control/if.hpp>
+#include <boost/preprocessor/facilities/empty.hpp>
+#include <boost/preprocessor/facilities/expand.hpp>
+#include <boost/preprocessor/comparison/equal.hpp>
+#include <boost/preprocessor/punctuation/paren.hpp>
+#include <boost/preprocessor/stringize.hpp>
+#include <boost/preprocessor/cat.hpp>
+
+// port driver documentation:
+// http://erlang.org/doc/man/erl_driver.html
+// http://erlang.org/doc/man/erl_ddll.html
+
+// limit on the number of function arguments handled in the bindings
+// (increasing this increases the (heap) memory consumption for
+//  asynchronous function calls and the stack size of synchronous calls)
+#define PORT_DRIVER_FUNCTIONS_MAXIMUM_ARGUMENTS 9
+
+
+#if ! defined(PORT_DRIVER_NAME)
+#error Define PORT_DRIVER_NAME within the functions header file to specify the \
+       dynamic library name (should not be static)
+#endif
+#if ! defined(PORT_DRIVER_FUNCTIONS)
+#if defined(PORT_FUNCTIONS)
+
+#define CREATE_PORT_DRIVER_FUNCTIONS_DEFINITION(S, DATA, ELEMENT) (\
+    BOOST_PP_TUPLE_ELEM(4, 0, ELEMENT),\
+    BOOST_PP_TUPLE_ELEM(4, 1, ELEMENT),\
+    BOOST_PP_TUPLE_ELEM(4, 2, ELEMENT),\
+    BOOST_PP_TUPLE_ELEM(4, 3, ELEMENT), 0)\
+
+#define PORT_DRIVER_FUNCTIONS \
+    BOOST_PP_SEQ_TRANSFORM(CREATE_PORT_DRIVER_FUNCTIONS_DEFINITION, _, \
+                           PORT_FUNCTIONS)
+#warning Using PORT_FUNCTIONS to determine PORT_DRIVER_FUNCTIONS \
+         (all synchronous function calls)
+#else
+#error Define PORT_DRIVER_FUNCTIONS within the functions header file to \
+       specify the functions and their types
+#endif
+#endif
+
+// 64bit return values are only possible on 64bit machines
+// because of the types ErlDrvSInt and ErlDrvUInt
+#define NATIVE_64BIT_TYPES (   defined(__alpha__)                            \
+                            || defined(__ia64__)                             \
+                            || defined(__ppc64__)                            \
+                            || defined(__s390x__)                            \
+                            || defined(__x86_64__))
+
+// define the structure of the PORT_DRIVER_FUNCTIONS macro data
+// (sequence of tuples)
+
+// 5 tuple elements in the PORT_DRIVER_FUNCTIONS sequence
+#define PORT_DRIVER_FUNCTION_ENTRY_LENGTH   5
+// specific tuple elements in the PORT_DRIVER_FUNCTIONS sequence
+#define PORT_DRIVER_FUNCTION_ENTRY_NAME     0
+#define PORT_DRIVER_FUNCTION_ENTRY_ARGC     1
+#define PORT_DRIVER_FUNCTION_ENTRY_ARGV     2
+#define PORT_DRIVER_FUNCTION_ENTRY_RETURN   3
+#define PORT_DRIVER_FUNCTION_ENTRY_ASYNC    4
+
+// macros to access function data in a PORT_DRIVER_FUNCTIONS tuple entry
+
+#define GET_NAME(FUNCTION) \
+    BOOST_PP_TUPLE_ELEM(\
+        PORT_DRIVER_FUNCTION_ENTRY_LENGTH, \
+        PORT_DRIVER_FUNCTION_ENTRY_NAME, FUNCTION\
+    )
+#define GET_ARGC(FUNCTION) \
+    BOOST_PP_TUPLE_ELEM(\
+        PORT_DRIVER_FUNCTION_ENTRY_LENGTH, \
+        PORT_DRIVER_FUNCTION_ENTRY_ARGC, FUNCTION\
+    )
+#define GET_ARGV(FUNCTION) \
+    BOOST_PP_TUPLE_ELEM(\
+        PORT_DRIVER_FUNCTION_ENTRY_LENGTH, \
+        PORT_DRIVER_FUNCTION_ENTRY_ARGV, FUNCTION\
+    )
+#define GET_RETURN(FUNCTION) \
+    BOOST_PP_TUPLE_ELEM(\
+        PORT_DRIVER_FUNCTION_ENTRY_LENGTH, \
+        PORT_DRIVER_FUNCTION_ENTRY_RETURN, FUNCTION\
+    )
+#define GET_ASYNC(FUNCTION) \
+    BOOST_PP_TUPLE_ELEM(\
+        PORT_DRIVER_FUNCTION_ENTRY_LENGTH, \
+        PORT_DRIVER_FUNCTION_ENTRY_ASYNC, FUNCTION\
+    )
+
+// enforce inherent implementation limits
+
+#if BOOST_PP_SEQ_SIZE(PORT_DRIVER_FUNCTIONS) > 32767
+#error Limited to 32767 port driver functions (type uint16_t is used for "cmd")
+#endif
 
 #if defined(PORT_DRIVER_C_FUNCTIONS_HEADER_FILE)
 extern "C"
@@ -79,7 +188,7 @@ extern "C"
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_bool(PREFIX, ARG) \
@@ -88,8 +197,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_bool(PREFIX) \
     BOOST_PP_CAT(PREFIX, bool) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_bool(PREFIX) \
-    reply_data_boolean(desc, BOOST_PP_CAT(PREFIX, bool));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_bool(ASYNC, PREFIX) \
+    reply_data_boolean(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, bool));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_bool \
     BOOST_PP_EMPTY()
 
@@ -100,7 +209,7 @@ extern "C"
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_char(PREFIX, ARG) \
@@ -109,8 +218,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_char(PREFIX) \
     BOOST_PP_CAT(PREFIX, char) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_char(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, char));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_char(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, char));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_char \
     BOOST_PP_EMPTY()
 
@@ -121,7 +230,7 @@ extern "C"
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_uchar(PREFIX, ARG) \
@@ -130,8 +239,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uchar(PREFIX) \
     BOOST_PP_CAT(PREFIX, uchar) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uchar(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, uchar));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uchar(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, uchar));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_uchar \
     BOOST_PP_EMPTY()
 
@@ -142,7 +251,7 @@ extern "C"
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_int8_t(PREFIX, ARG) \
@@ -151,8 +260,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_int8_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, int8_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int8_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, int8_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int8_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, int8_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_int8_t \
     BOOST_PP_EMPTY()
 
@@ -163,7 +272,7 @@ extern "C"
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_uint8_t(PREFIX, ARG) \
@@ -172,8 +281,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint8_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, uint8_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint8_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, uint8_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint8_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, uint8_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_uint8_t \
     BOOST_PP_EMPTY()
 
@@ -184,7 +293,7 @@ extern "C"
     if (EV_GET_UINT16(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_int16_t(PREFIX, ARG) \
@@ -193,8 +302,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_int16_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, int16_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int16_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, int16_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int16_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, int16_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_int16_t \
     BOOST_PP_EMPTY()
 
@@ -205,7 +314,7 @@ extern "C"
     if (EV_GET_UINT16(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_uint16_t(PREFIX, ARG) \
@@ -214,8 +323,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint16_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, uint16_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint16_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, uint16_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint16_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, uint16_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_uint16_t \
     BOOST_PP_EMPTY()
 
@@ -226,7 +335,7 @@ extern "C"
     if (EV_GET_UINT32(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_int32_t(PREFIX, ARG) \
@@ -235,8 +344,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_int32_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, int32_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int32_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, int32_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int32_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, int32_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_int32_t \
     BOOST_PP_EMPTY()
 
@@ -247,7 +356,7 @@ extern "C"
     if (EV_GET_UINT32(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_uint32_t(PREFIX, ARG) \
@@ -256,22 +365,28 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint32_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, uint32_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint32_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, uint32_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint32_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, uint32_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_uint32_t \
     BOOST_PP_EMPTY()
 
 // time_t, from time.h
-// (can be 64bit, but treated as if it is always 32bit, so initialize to 0)
 #define GET_FUNCTION_ARGUMENT_FROM_TYPE_time_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, _._time_t)
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_time_t(ASYNC, PREFIX, ARG) \
-    ARG = 0; \
-    if (EV_GET_UINT32(ev, &(ARG), p, q))  \
+    if (EV_GET_UINT64(ev, &(GET_FUNCTION_ARGUMENT(uint64_t, PREFIX)), p, q))  \
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
+    }\
+    if (sizeof(time_t) == 4)\
+    {\
+        ARG = GET_FUNCTION_ARGUMENT(uint64_t, PREFIX) & 0xffffffff;\
+    }\
+    else \
+    {\
+        ARG = GET_FUNCTION_ARGUMENT(uint64_t, PREFIX);\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_time_t(PREFIX, ARG) \
     BOOST_PP_EMPTY()
@@ -279,8 +394,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_time_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, time_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_time_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, time_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_time_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, time_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_time_t \
     BOOST_PP_EMPTY()
 
@@ -291,7 +406,7 @@ extern "C"
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_int64_t(PREFIX, ARG) \
@@ -301,8 +416,8 @@ extern "C"
 #if NATIVE_64BIT_TYPES
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_int64_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, int64_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int64_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, int64_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int64_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, int64_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_int64_t \
     BOOST_PP_EMPTY()
 #endif
@@ -314,7 +429,7 @@ extern "C"
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_uint64_t(PREFIX, ARG) \
@@ -324,8 +439,8 @@ extern "C"
 #if NATIVE_64BIT_TYPES
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint64_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, uint64_t) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint64_t(PREFIX) \
-    reply_data_integer(desc, BOOST_PP_CAT(PREFIX, uint64_t));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint64_t(ASYNC, PREFIX) \
+    reply_data_integer(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, uint64_t));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_uint64_t \
     BOOST_PP_EMPTY()
 #endif
@@ -337,7 +452,7 @@ extern "C"
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_double(PREFIX, ARG) \
@@ -346,8 +461,8 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_double(PREFIX) \
     BOOST_PP_CAT(PREFIX, double) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_double(PREFIX) \
-    reply_data_double(desc, BOOST_PP_CAT(PREFIX, double));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_double(ASYNC, PREFIX) \
+    reply_data_double(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, double));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_double \
     BOOST_PP_EMPTY()
 
@@ -361,7 +476,7 @@ extern "C"
     if (EV_GET_UINT32(ev, &(LEN), p, q)) \
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }\
     BOOST_PP_CAT(PREFIX, _._bin.ptr._void) = EV_GETPOS(ev, p, q);\
@@ -369,7 +484,7 @@ extern "C"
     if (ev_incr(ev, LEN, p, q) < 0) \
     {\
         BOOST_PP_IF(ASYNC, driver_free(c); , BOOST_PP_EMPTY())\
-        reply_data_error_string(desc, Error::unable_to_decode_arguments);\
+        reply_data_error_string(desc, ASYNC != 0, Error::decode_arguments);\
         return;\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_pchar_len(PREFIX, PTR, LEN) \
@@ -380,9 +495,10 @@ extern "C"
     BOOST_PP_CAT(PREFIX, bin.ptr._char) =
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_pchar \
     c->o._bin.length = strlen(c->o._bin.ptr._char);
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_pchar(PREFIX) \
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_pchar(ASYNC, PREFIX) \
     reply_data_string(\
         desc, \
+        ASYNC != 0, \
         BOOST_PP_CAT(PREFIX, bin.ptr._char),\
         BOOST_PP_CAT(PREFIX, bin.length)\
     );
@@ -390,8 +506,8 @@ extern "C"
 // float
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_float(PREFIX) \
     BOOST_PP_CAT(PREFIX, float) =
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_float(PREFIX) \
-    reply_data_double(desc, BOOST_PP_CAT(PREFIX, float));
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_float(ASYNC, PREFIX) \
+    reply_data_double(desc, ASYNC != 0, BOOST_PP_CAT(PREFIX, float));
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_float \
     BOOST_PP_EMPTY()
 
@@ -400,33 +516,12 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_void \
     BOOST_PP_EMPTY()
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_void(PREFIX) \
-    reply_data_ok(desc);
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_void(ASYNC, PREFIX) \
+    reply_data_ok(desc, ASYNC != 0);
 
 //////////////////////////////////////////////////////////////////////////////
 // preprocessing macros to generate function specific bindings code
 //////////////////////////////////////////////////////////////////////////////
-
-#include <erl_driver.h>
-#include <stdint.h>
-#include <errno.h>
-#include <cstring>
-
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/tuple/to_seq.hpp>
-#include <boost/preprocessor/cat.hpp>
-#include <boost/preprocessor/repetition/enum.hpp>
-#include <boost/preprocessor/punctuation/comma.hpp>
-#include <boost/preprocessor/control/if.hpp>
-#include <boost/preprocessor/facilities/empty.hpp>
-#include <boost/preprocessor/comparison/equal.hpp>
-#include <boost/preprocessor/punctuation/paren.hpp>
-#include <boost/preprocessor/seq/for_each_i.hpp>
-#include <boost/preprocessor/facilities/expand.hpp>
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
-#include <boost/preprocessor/seq/size.hpp>
-#include <boost/preprocessor/stringize.hpp>
 
 // create the local invocations of the port driver functions
 
@@ -539,9 +634,8 @@ return;
 // create the case statements for each function's return value
 // (C++/C -> Erlang)
 
-#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE(TYPE, PREFIX) \
-    BOOST_PP_CAT(CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_, TYPE)(PREFIX)
-
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE(TYPE, ASYNC, PREFIX) \
+    BOOST_PP_CAT(CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_, TYPE)(ASYNC, PREFIX)
 
 #define CREATE_FUNCTION_OUTPUT_PROCESS(TYPE, ARGUMENT) \
     BOOST_PP_EXPAND( \
@@ -558,7 +652,9 @@ return;
 
 #define CREATE_FUNCTION_OUTPUT_CASE(I, DATA, FUNCTION) \
 case BOOST_PP_DEC(I):\
-    CREATE_FUNCTION_OUTPUT_RETURN_VALUE(GET_RETURN(FUNCTION), c->o._) \
+    CREATE_FUNCTION_OUTPUT_RETURN_VALUE(\
+        GET_RETURN(FUNCTION), GET_ASYNC(FUNCTION), c->o._\
+    )\
     BOOST_PP_SEQ_FOR_EACH_I(\
         CREATE_FUNCTION_OUTPUT_ARGUMENT_PROCESSING, _,\
         BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
@@ -733,6 +829,8 @@ static ErlDrvTermData const atom_value_error =
     driver_mk_atom(const_cast<char *>("error"));
 static ErlDrvTermData const atom_value_data =
     driver_mk_atom(const_cast<char *>("data"));
+static ErlDrvTermData const atom_value_async =
+    driver_mk_atom(const_cast<char *>("async"));
 static ErlDrvTermData const atom_value_true =
     driver_mk_atom(const_cast<char *>("true"));
 static ErlDrvTermData const atom_value_false =
@@ -757,11 +855,11 @@ static int driver_output_term_locked(ErlDrvMutex * mutex,
     return returnValue;
 }
 
-static int reply_data_ok(descriptor_t *desc)
+static int reply_data_ok(descriptor_t *desc, bool async)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_ATOM, atom_value_ok,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
@@ -771,11 +869,11 @@ static int reply_data_ok(descriptor_t *desc)
 }
 
 #define CREATE_REPLY_OK_INTEGER(TYPE, ERLTYPE)                               \
-static int reply_data_integer(descriptor_t *desc, TYPE number)               \
+static int reply_data_integer(descriptor_t *desc, bool async, TYPE number)   \
 {                                                                            \
     ErlDrvTermData spec[] = {                                                \
         ERL_DRV_PORT, desc->port_term,                                       \
-        ERL_DRV_ATOM, atom_value_data,                                       \
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),          \
         ERLTYPE, number,                                                     \
         ERL_DRV_TUPLE, 2,                                                    \
         ERL_DRV_TUPLE, 2                                                     \
@@ -796,11 +894,11 @@ CREATE_REPLY_OK_INTEGER(int64_t,  ERL_DRV_INT)
 CREATE_REPLY_OK_INTEGER(uint64_t, ERL_DRV_UINT)
 #endif
 
-static int reply_data_boolean(descriptor_t *desc, bool value)
+static int reply_data_boolean(descriptor_t *desc, bool async, bool value)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_ATOM, (value ? atom_value_true : atom_value_false),
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
@@ -809,11 +907,11 @@ static int reply_data_boolean(descriptor_t *desc, bool value)
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
-static int reply_data_double(descriptor_t *desc, double number)
+static int reply_data_double(descriptor_t *desc, bool async, double number)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_FLOAT, reinterpret_cast<ErlDrvTermData>(&number),
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
@@ -822,11 +920,11 @@ static int reply_data_double(descriptor_t *desc, double number)
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
-static int reply_data_binary(descriptor_t *desc, ErlDrvBinary *ptr)
+static int reply_data_binary(descriptor_t *desc, bool async, ErlDrvBinary *ptr)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_BINARY, reinterpret_cast<ErlDrvTermData>(ptr),
                         ptr->orig_size, 0,
         ERL_DRV_TUPLE, 2,
@@ -836,12 +934,13 @@ static int reply_data_binary(descriptor_t *desc, ErlDrvBinary *ptr)
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
-static int reply_data_binary(descriptor_t *desc, void *ptr, uint32_t length)
+static int reply_data_binary(descriptor_t *desc, bool async,
+                             void *ptr, uint32_t length)
 {
     
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_BUF2BINARY, reinterpret_cast<ErlDrvTermData>(ptr),
                             length,
         ERL_DRV_TUPLE, 2,
@@ -851,11 +950,12 @@ static int reply_data_binary(descriptor_t *desc, void *ptr, uint32_t length)
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
-static int reply_data_string(descriptor_t *desc, char *ptr, uint32_t length)
+static int reply_data_string(descriptor_t *desc, bool async, 
+                             char *ptr, uint32_t length)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_STRING, reinterpret_cast<ErlDrvTermData>(ptr),
                         length,
         ERL_DRV_TUPLE, 2,
@@ -874,20 +974,21 @@ namespace
     {
         char const * const invalid_function =
             "Invalid function call";
-        char const * const unable_to_decode_identifier =
+        char const * const decode_identifier =
             "Unable to decode function identifier";
-        char const * const unable_to_decode_arguments =
+        char const * const decode_arguments =
             "Unable to decode arguments";
     }
 
 }
 
-static int reply_data_error_string(descriptor_t *desc, char const * const ptr)
+static int reply_data_error_string(descriptor_t *desc, bool async,
+                                   char const * const ptr)
 {
     uint32_t const length = strlen(ptr);
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
-        ERL_DRV_ATOM, atom_value_data,
+        ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_ATOM, atom_value_error,
         ERL_DRV_STRING, reinterpret_cast<ErlDrvTermData>(ptr),
                         length,
@@ -946,7 +1047,7 @@ static void driver_entry_ready_async(ErlDrvData driver_data,
         BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION_OUTPUT_CASE, _,
                               PORT_DRIVER_FUNCTIONS)
         default:
-            reply_data_error_string(desc, Error::invalid_function);
+            reply_data_error_string(desc, false, Error::invalid_function);
             return;
     }
 }
@@ -965,7 +1066,7 @@ static void driver_entry_outputv(ErlDrvData driver_data, ErlIOVec *ev)
     size_t p = 0; // index into ev->iov[q].iov_base
     if (EV_GET_UINT16(ev, &cmd, p, q))
     {
-        reply_data_error_string(desc, Error::unable_to_decode_identifier);
+        reply_data_error_string(desc, false, Error::decode_identifier);
         return;
     }
 
@@ -976,7 +1077,7 @@ static void driver_entry_outputv(ErlDrvData driver_data, ErlIOVec *ev)
                               PORT_DRIVER_FUNCTIONS)
 
         default:
-            reply_data_error_string(desc, Error::invalid_function);
+            reply_data_error_string(desc, false, Error::invalid_function);
             return;
     }
 }

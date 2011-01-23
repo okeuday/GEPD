@@ -1,4 +1,4 @@
-GENERIC ERLANG PORT [DRIVER] (GEP[D]), VERSION 0.6 (Feb 15 2009)
+GENERIC ERLANG PORT [DRIVER] (GEP[D]), VERSION 0.7 (Jan 22 2011)
 
 PURPOSE
 -------------------------------------------------
@@ -11,8 +11,8 @@ test_bindings.h contains the ONLY configuration to support the C functions in
 
 test_bindings.erl provides the gen_server to manage the port or port driver
 erlang_functions_hrl.h creates the erlang function interface
-port_driver.cpp and port_driver.h provide the Erlang port driver implementation
-port.cpp and port.h provide the Erlang port implementation
+port_driver.cpp provides the Erlang port driver implementation
+port.cpp and port.hpp provide the Erlang port implementation
 
 Whether PORT_DRIVER_NAME_PREFIX or PORT_NAME_PREFIX is defined determines
 if a port driver or port is built, respectively (in test_bindings.h).
@@ -24,10 +24,11 @@ Features:
 - functionality like the Erlang Driver Tool Kit (EDTK) (no fd handling though)
 - macro expansion to avoid code duplication errors
 - floating point type handling
+- stdout/stderr handling in the generated port code
 
 Caveat:
 The generated port driver code can not be used for hot code updating
-because it uses the async thread pool, which locks the driver
+if it performs an asynchronous call because erts will lock the driver
 (making it "permanent") with driver_lock_driver()
 (http://erlang.org/doc/man/erl_driver.html#driver_lock_driver).
 With the driver locked, there is no possibility that an async
@@ -50,18 +51,20 @@ RUNNING
 The test_bindings code should generate output similar to:
 
 $ erl +A 16
-Erlang (BEAM) emulator version 5.6.5 [source] [64-bit] [smp:4] [async-threads:16] [kernel-poll:false]
-Eshell V5.6.5  (abort with ^G)
+Erlang R13B02 (erts-5.7.3) [source] [64-bit] [smp:4:4] [rq:4] [async-threads:16] [kernel-poll:false]
+
+Eshell V5.7.3  (abort with ^G)
 1> test_bindings:start().
-{ok,<0.34.0>}
+using port driver
+{ok,<0.35.0>}
 2> test_bindings:test(). 
 sync sleep
 async sleep
 ...
 ok
-3> 
-async function call returned: ok
-3> 
+3>
+async function call returned: {ok,ok}
+3>
 
 
 LICENSE
