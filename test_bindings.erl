@@ -1,12 +1,12 @@
 %%% -*- Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-%%% GENERIC ERLANG PORT [DRIVER] VERSION 0.6
+%%% GENERIC ERLANG PORT [DRIVER] VERSION 0.7
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -138,13 +138,13 @@ init([]) ->
     end.
 
 %% handle synchronous function calls on the port/port_driver
-handle_call({call, Msg}, Client,
+handle_call({call, Command, Msg}, Client,
             #state{port = Port,
                    replies = Replies} = State)
     when is_port(Port), is_list(Msg) ->
     case call_port(Port, Msg) of
         ok ->
-            {noreply, State#state{replies = Replies ++ [Client]}};
+            {noreply, State#state{replies = Replies ++ [{Command, Client}]}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -154,7 +154,7 @@ handle_call(Request, _, State) ->
     {stop, "Unknown call", State}.
 
 %% handle asynchronous function calls on the port driver
-handle_cast({call, Msg},
+handle_cast({call, _, Msg},
             #state{port = Port} = State)
     when is_port(Port) ->
     case call_port(Port, Msg) of
@@ -184,20 +184,33 @@ handle_info({Port, {data, Data}},
                    replies = Replies} = State)
     when is_port(Port) ->
     case transform_data(Data) of
-        {error, _} = Error ->
-            [Client | NewReplies] = Replies,
-            gen_server:reply(Client, Error),
-            {noreply, State#state{replies = NewReplies}};
+        {error, 0, Reason} ->
+            catch erlang:port_close(Port),
+            {stop, Reason, State#state{port = undefined}};
+        {error, Command, Reason} ->
+            case lists:keytake(Command, 1, Replies) of
+                false ->
+                    catch erlang:port_close(Port),
+                    {stop, "invalid reply", State#state{port = undefined}};
+                {value, {Command, Client}, NewReplies} ->
+                    gen_server:reply(Client, {error, Reason}),
+                    {noreply, State#state{replies = NewReplies}}
+            end;
         {Stream, Output} when Stream == stdout; Stream == stderr ->
             FormattedOutput = lists:flatmap(fun(Line) ->
                 io_lib:format("    ~s~n", [Line])
             end, string:tokens(Output, "\n")),
             io:format("~p:~n~s", [Stream, FormattedOutput]),
             {noreply, State};
-        Success ->
-            [Client | NewReplies] = Replies,
-            gen_server:reply(Client, {ok, Success}),
-            {noreply, State#state{replies = NewReplies}}
+        {Command, Success} ->
+            case lists:keytake(Command, 1, Replies) of
+                false ->
+                    catch erlang:port_close(Port),
+                    {stop, "invalid reply", State#state{port = undefined}};
+                {value, {Command, Client}, NewReplies} ->
+                    gen_server:reply(Client, {ok, Success}),
+                    {noreply, State#state{replies = NewReplies}}
+            end
     end;
 
 %% port_driver async response
@@ -205,9 +218,9 @@ handle_info({Port, {async, RawData}},
             #state{port = Port} = State)
     when is_port(Port) ->
     Data = case transform_data(RawData) of
-        {error, _} = Error ->
-            Error;
-        Success ->
+        {error, _, Reason} ->
+            {error, Reason};
+        {_, Success} ->
             {ok, Success}
     end,
     io:format("async function call returned: ~p~n", [Data]),
@@ -385,8 +398,9 @@ transform_data(D) ->
     D.
 %% only a port driver can perform asynchronous function calls
 %% (you might be able to put a thread pool in an Erlang port, but why bother?)
-call_port_async(Process, Msg) when is_list(Msg) ->
-    gen_server:cast(Process, {call, Msg}).
+call_port_async(Process, Command, Msg)
+    when is_integer(Command), is_list(Msg) ->
+    gen_server:cast(Process, {call, Command, Msg}).
 -else.
 -ifdef(ERL_PORT_NAME).
 local_port_name() ->
@@ -407,13 +421,14 @@ load_local_port(Name) when is_list(Name) ->
     end.
 transform_data(D) ->
     erlang:binary_to_term(D).
-call_port_async(Process, Msg) ->
-    call_port_sync(Process, Msg).
+call_port_async(Process, Command, Msg) ->
+    call_port_sync(Process, Command, Msg).
 -endif.
 -endif.
 
-call_port_sync(Process, Msg) when is_list(Msg) ->
-    gen_server:call(Process, {call, Msg}).
+call_port_sync(Process, Command, Msg)
+    when is_integer(Command), is_list(Msg) ->
+    gen_server:call(Process, {call, Command, Msg}).
 
 call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
     try erlang:port_command(Port, Msg) of
@@ -443,7 +458,7 @@ load_path(File) when is_list(File) ->
     end.
 
 erroneous_call(Process) ->
-    call_port_sync(Process, [<<32767:16/unsigned-integer-native>>]).
+    call_port_sync(Process, 32767, [<<32767:16/unsigned-integer-native>>]).
 
 %% exit status messages
 

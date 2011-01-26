@@ -208,6 +208,7 @@
     )\
     BOOST_PP_LPAREN() \
     Process, \
+    BOOST_PP_DEC(I), \
     [\
         <<BOOST_PP_DEC(I):16/unsigned-integer-native>>\
         BOOST_PP_REPEAT_FROM_TO(\

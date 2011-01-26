@@ -152,8 +152,12 @@ extern "C"
 
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_void                          \
     (void)
-#define STORE_RETURN_VALUE_TYPE_void                                          \
+#define STORE_RETURN_VALUE_TYPE_void(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_atom(buffer.get<char>(), &index, "ok"))                     \
         return InternalExitStatus::ei_encode_error;
@@ -164,8 +168,12 @@ extern "C"
     *((char *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_char                          \
     char returnValue = 
-#define STORE_RETURN_VALUE_TYPE_char                                          \
+#define STORE_RETURN_VALUE_TYPE_char(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return InternalExitStatus::ei_encode_error;
@@ -176,8 +184,12 @@ extern "C"
     *((unsigned char *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_uchar                         \
     unsigned char returnValue = 
-#define STORE_RETURN_VALUE_TYPE_uchar                                         \
+#define STORE_RETURN_VALUE_TYPE_uchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_char(buffer.get<char>(), &index, (char) returnValue))       \
         return InternalExitStatus::ei_encode_error;
@@ -188,8 +200,12 @@ extern "C"
     *((uint8_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_bool                          \
     bool returnValue = 
-#define STORE_RETURN_VALUE_TYPE_bool                                          \
+#define STORE_RETURN_VALUE_TYPE_bool(CMD)                                     \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_boolean(buffer.get<char>(), &index, (int) returnValue))     \
         return InternalExitStatus::ei_encode_error;
@@ -200,8 +216,12 @@ extern "C"
     *((int8_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_int8_t                        \
     int8_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_int8_t                                        \
+#define STORE_RETURN_VALUE_TYPE_int8_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return InternalExitStatus::ei_encode_error;
@@ -212,8 +232,12 @@ extern "C"
     *((uint8_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint8_t                       \
     uint8_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_uint8_t                                       \
+#define STORE_RETURN_VALUE_TYPE_uint8_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return InternalExitStatus::ei_encode_error;
@@ -224,8 +248,12 @@ extern "C"
     *((int16_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_int16_t                       \
     int16_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_int16_t                                       \
+#define STORE_RETURN_VALUE_TYPE_int16_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return InternalExitStatus::ei_encode_error;
@@ -236,8 +264,12 @@ extern "C"
     *((uint16_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint16_t                      \
     uint16_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_uint16_t                                      \
+#define STORE_RETURN_VALUE_TYPE_uint16_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return InternalExitStatus::ei_encode_error;
@@ -248,8 +280,12 @@ extern "C"
     *((int32_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_int32_t                       \
     int32_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_int32_t                                       \
+#define STORE_RETURN_VALUE_TYPE_int32_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_long(buffer.get<char>(), &index, returnValue))              \
         return InternalExitStatus::ei_encode_error;
@@ -260,8 +296,12 @@ extern "C"
     *((uint32_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint32_t                      \
     uint32_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_uint32_t                                      \
+#define STORE_RETURN_VALUE_TYPE_uint32_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_ulong(buffer.get<char>(), &index, returnValue))             \
         return InternalExitStatus::ei_encode_error;
@@ -272,8 +312,12 @@ extern "C"
     *((int64_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_int64_t                       \
     int64_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_int64_t                                       \
+#define STORE_RETURN_VALUE_TYPE_int64_t(CMD)                                  \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_longlong(buffer.get<char>(), &index, returnValue))          \
         return InternalExitStatus::ei_encode_error;
@@ -284,8 +328,12 @@ extern "C"
     *((uint64_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint64_t                      \
     uint64_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_uint64_t                                      \
+#define STORE_RETURN_VALUE_TYPE_uint64_t(CMD)                                 \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
         return InternalExitStatus::ei_encode_error;
@@ -296,8 +344,12 @@ extern "C"
     *((uint64_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_time_t                        \
     uint64_t returnValue = 
-#define STORE_RETURN_VALUE_TYPE_time_t                                        \
+#define STORE_RETURN_VALUE_TYPE_time_t(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_ulonglong(buffer.get<char>(), &index, returnValue))         \
         return InternalExitStatus::ei_encode_error;
@@ -308,8 +360,12 @@ extern "C"
     ((float) *((double *) &(buffer[(OFFSET)])))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_float                         \
     double returnValue =
-#define STORE_RETURN_VALUE_TYPE_float                                         \
+#define STORE_RETURN_VALUE_TYPE_float(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
         return InternalExitStatus::ei_encode_error;
@@ -320,8 +376,12 @@ extern "C"
     *((double *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_double                        \
     double returnValue =
-#define STORE_RETURN_VALUE_TYPE_double                                        \
+#define STORE_RETURN_VALUE_TYPE_double(CMD)                                   \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (ei_encode_double(buffer.get<char>(), &index, returnValue))            \
         return InternalExitStatus::ei_encode_error;
@@ -335,8 +395,12 @@ extern "C"
     *((uint32_t *) &(buffer[(OFFSET)]))
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
     char const * returnValue =
-#define STORE_RETURN_VALUE_TYPE_pchar                                         \
+#define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return InternalExitStatus::ei_encode_error;                           \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
         return InternalExitStatus::ei_encode_error;                           \
     if (buffer.reserve(index + strlen(returnValue) + 1) == false)             \
         return InternalExitStatus::write_overflow;                            \
@@ -614,13 +678,15 @@ namespace
     }
     
     int reply_error_string(realloc_ptr<unsigned char> & buffer,
-                           int & index, char const * const str)
+                           int & index, uint16_t cmd, char const * const str)
     {
         if (ei_encode_version(buffer.get<char>(), &index))
             return InternalExitStatus::ei_encode_error;
-        if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
+        if (ei_encode_tuple_header(buffer.get<char>(), &index, 3))
             return InternalExitStatus::ei_encode_error;
         if (ei_encode_atom(buffer.get<char>(), &index, "error"))
+            return InternalExitStatus::ei_encode_error;
+        if (ei_encode_ulong(buffer.get<char>(), &index, cmd))
             return InternalExitStatus::ei_encode_error;
         if (buffer.reserve(index + strlen(str) + 1) == false)
             return InternalExitStatus::write_overflow;
@@ -629,8 +695,8 @@ namespace
         return InternalExitStatus::success;
     }
 
-#define STORE_RETURN_VALUE(TYPE) \
-    BOOST_PP_CAT(STORE_RETURN_VALUE_TYPE_, TYPE)
+#define STORE_RETURN_VALUE(TYPE, CMD) \
+    BOOST_PP_CAT(STORE_RETURN_VALUE_TYPE_, TYPE)(CMD)
 
 #define GET_FUNCTION_ARGUMENT(TYPE, OFFSET) \
     BOOST_PP_CAT(\
@@ -689,7 +755,7 @@ case BOOST_PP_DEC(I):\
     BOOST_PP_RPAREN() \
     ; \
     int index = BOOST_PP_SEQ_ELEM(1, OFFSETS); \
-    STORE_RETURN_VALUE(GET_RETURN(FUNCTION)) \
+    STORE_RETURN_VALUE(GET_RETURN(FUNCTION), BOOST_PP_DEC(I)) \
     if (status = write_cmd(buffer, index - BOOST_PP_SEQ_ELEM(1, OFFSETS))) \
         return status; \
     return InternalExitStatus::success;\
@@ -711,7 +777,8 @@ case BOOST_PP_DEC(I):\
         }
         else
         {
-            switch (*((INPUT_PREFIX_TYPE *) buffer.get()))
+            INPUT_PREFIX_TYPE cmd = *((INPUT_PREFIX_TYPE *) buffer.get());
+            switch (cmd)
             {
                 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION,
                                       (sizeof(INPUT_PREFIX_TYPE))
@@ -720,7 +787,7 @@ case BOOST_PP_DEC(I):\
     
                 default:
                     int index = sizeof(OUTPUT_PREFIX_TYPE);
-                    if ((status = reply_error_string(buffer, index,
+                    if ((status = reply_error_string(buffer, index, cmd, 
                                                      Error::invalid_function)))
                         return status;
                     if ((status = write_cmd(buffer, index -
