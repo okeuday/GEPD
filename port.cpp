@@ -664,19 +664,6 @@ namespace
         return write_exact(buffer.get(), length + 4);
     }
     
-    int store_std_fd(int & out, int in)
-    {
-        int fds[2] = {-1, -1};
-        if (pipe(fds) == -1)
-            return InternalExitStatus::pipe_errno();
-        if (dup2(fds[1], in) == -1)
-            return InternalExitStatus::dup_errno();
-        if (close(fds[1]) == -1)
-            return InternalExitStatus::close_errno();
-        out = fds[0];
-        return InternalExitStatus::success;
-    }
-    
     int reply_error_string(realloc_ptr<unsigned char> & buffer,
                            int & index, uint16_t cmd, char const * const str)
     {
@@ -798,77 +785,6 @@ case BOOST_PP_DEC(I):\
         }
     }
 
-    int consume_stream(int fd, short & revents, char const * const name,
-                       realloc_ptr<unsigned char> & buffer,
-                       realloc_ptr<unsigned char> & stream, size_t & i)
-    {
-        if (revents & POLLERR)
-            return InternalExitStatus::poll_ERR;
-        else if (revents & POLLHUP)
-            return InternalExitStatus::poll_HUP;
-        else if (revents & POLLNVAL)
-            return InternalExitStatus::poll_NVAL;
-        revents = 0;
-
-        ssize_t left = stream.size() - i;
-        ssize_t readBytes;
-        while ((readBytes = read(fd, &stream[i], left)) == left &&
-               stream.grow())
-        {
-            i += left;
-            left = stream.size() - i;
-        }
-        if (readBytes == 0 && i == 0)
-            return InternalExitStatus::success;
-        else if (readBytes == -1)
-            return InternalExitStatus::read_errno();
-        i += readBytes; // i is the next index to read at, always
-
-        // only send stderr output before the last newline character
-        bool foundNewline = false;
-        size_t iNewline = 0;
-        for (ssize_t j = i - 1; ! foundNewline && j >= 0; --j)
-        {
-            if (stream[j] == '\n')
-            {
-                foundNewline = true;
-                iNewline = j;
-            }
-        }
-
-        if (foundNewline)
-        {
-            int index = sizeof(OUTPUT_PREFIX_TYPE);
-            if (ei_encode_version(buffer.get<char>(), &index))
-                return InternalExitStatus::ei_encode_error;
-            if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
-                return InternalExitStatus::ei_encode_error;
-            if (ei_encode_atom(buffer.get<char>(), &index, name))
-                return InternalExitStatus::ei_encode_error;
-            if (buffer.reserve(index + (iNewline + 1) + 1) == false)
-                return InternalExitStatus::write_overflow;
-            if (ei_encode_string_len(buffer.get<char>(), &index,
-                                     stream.get<char>(), iNewline + 1))
-                return InternalExitStatus::ei_encode_error;
-            int status;
-            if ((status = write_cmd(buffer, index -
-                                    sizeof(OUTPUT_PREFIX_TYPE))))
-                return status;
-            // keep any stderr data not yet sent (waiting for a newline)
-            if (iNewline == i - 1)
-            {
-                i = 0;
-            }
-            else
-            {
-                size_t const remainingBytes = i - iNewline - 1;
-                stream.move(iNewline + 1, remainingBytes, 0);
-                i = remainingBytes;
-            }
-        }
-        return InternalExitStatus::success;
-    }
-
     enum
     {
         INDEX_STDOUT = 0,
@@ -877,6 +793,96 @@ case BOOST_PP_DEC(I):\
     };
 }
 
+int GEPD::consume_stream(int fd, short & revents, char const * const name,
+                         realloc_ptr<unsigned char> & send_buffer,
+                         realloc_ptr<unsigned char> & stream, size_t & i)
+{
+    if (revents & POLLERR)
+        return InternalExitStatus::poll_ERR;
+    else if (revents & POLLHUP)
+        return InternalExitStatus::poll_HUP;
+    else if (revents & POLLNVAL)
+        return InternalExitStatus::poll_NVAL;
+    revents = 0;
+
+    ssize_t left = stream.size() - i;
+    ssize_t readBytes;
+    while ((readBytes = read(fd, &stream[i], left)) == left &&
+           stream.grow())
+    {
+        i += left;
+        left = stream.size() - i;
+    }
+    if (readBytes == 0 && i == 0)
+        return InternalExitStatus::success;
+    else if (readBytes == -1)
+        return InternalExitStatus::read_errno();
+    i += readBytes; // i is the next index to read at, always
+
+    // only send stderr output before the last newline character
+    bool foundNewline = false;
+    size_t iNewline = 0;
+    for (ssize_t j = i - 1; ! foundNewline && j >= 0; --j)
+    {
+        if (stream[j] == '\n')
+        {
+            foundNewline = true;
+            iNewline = j;
+        }
+    }
+
+    if (foundNewline)
+    {
+        unsigned long const pid = getpid();
+        int index = sizeof(OUTPUT_PREFIX_TYPE);
+        if (ei_encode_version(send_buffer.get<char>(), &index))
+            return InternalExitStatus::ei_encode_error;
+        if (ei_encode_tuple_header(send_buffer.get<char>(), &index, 3))
+            return InternalExitStatus::ei_encode_error;
+        if (ei_encode_atom(send_buffer.get<char>(), &index, name))
+            return InternalExitStatus::ei_encode_error;
+        if (ei_encode_ulong(send_buffer.get<char>(), &index, pid))
+            return InternalExitStatus::ei_encode_error;
+        if (send_buffer.reserve(index + (iNewline + 1) + 1) == false)
+            return InternalExitStatus::write_overflow;
+        if (ei_encode_string_len(send_buffer.get<char>(), &index,
+                                 stream.get<char>(), iNewline + 1))
+            return InternalExitStatus::ei_encode_error;
+        int status;
+        if ((status = write_cmd(send_buffer, index -
+                                sizeof(OUTPUT_PREFIX_TYPE))))
+            return status;
+        // keep any data not yet sent (waiting for a newline)
+        if (iNewline == i - 1)
+        {
+            i = 0;
+        }
+        else
+        {
+            size_t const remainingBytes = i - iNewline - 1;
+            stream.move(iNewline + 1, remainingBytes, 0);
+            i = remainingBytes;
+        }
+    }
+    return InternalExitStatus::success;
+}
+
+int GEPD::store_standard_fd(int in, int & out)
+{
+    int fds[2] = {-1, -1};
+    if (pipe(fds) == -1)
+        return InternalExitStatus::pipe_errno();
+    if (dup2(fds[1], in) == -1)
+        return InternalExitStatus::dup_errno();
+    if (close(fds[1]) == -1)
+        return InternalExitStatus::close_errno();
+    out = fds[0];
+    return InternalExitStatus::success;
+}
+
+realloc_ptr<struct pollfd> GEPD::fds(4, 65536);
+nfds_t GEPD::nfds = 0;
+
 // main loop for handling inherently synchronous function calls
 // (a linked-in Erlang port driver that makes synchronous calls with
 //  driver level locking should be similar to an Erlang port, except that
@@ -884,8 +890,6 @@ case BOOST_PP_DEC(I):\
 
 int GEPD::default_main()
 {
-    struct pollfd fds[3];
-    int const nfds = 3;
     int const timeout = -1; // milliseconds
     // use the option {packet, 4} for open_port/2
     // (limited by 4MB buffer size below)
@@ -893,33 +897,35 @@ int GEPD::default_main()
     realloc_ptr<unsigned char> stream1(1, 16384);
     realloc_ptr<unsigned char> stream2(1, 16384);
     int status;
-    if ((status = GEPD::init(fds, nfds)))
+    if ((status = GEPD::init()))
         return status;
-    return GEPD::wait(fds, nfds, timeout, buffer, stream1, stream2);
+    return GEPD::wait(timeout, buffer, stream1, stream2);
 }
 
-int GEPD::init(struct pollfd * const fds, nfds_t const nfds)
+int GEPD::init()
 {
-    if (nfds < 3)
-        return InternalExitStatus::poll_unknown;
+    if (nfds > 0)
+    {
+        fds.move(0, nfds, 3);
+    }
 
     int status;
-    if ((status = store_std_fd(fds[INDEX_STDOUT].fd, 1)))
+    if ((status = store_standard_fd(1, fds[INDEX_STDOUT].fd)))
         return status;
     fds[INDEX_STDOUT].events = POLLIN | POLLPRI;
     fds[INDEX_STDOUT].revents = 0;
-    if ((status = store_std_fd(fds[INDEX_STDERR].fd, 2)))
+    if ((status = store_standard_fd(2, fds[INDEX_STDERR].fd)))
         return status;
     fds[INDEX_STDERR].events = POLLIN | POLLPRI;
     fds[INDEX_STDERR].revents = 0;
     fds[INDEX_ERLANG].fd = PORT_READ_FILE_DESCRIPTOR;
     fds[INDEX_ERLANG].events = POLLIN | POLLPRI;
     fds[INDEX_ERLANG].revents = 0;
+    nfds += 3;
     return InternalExitStatus::success;
 }
 
-int GEPD::wait(struct pollfd * const fds, nfds_t const nfds,
-               int const timeout,
+int GEPD::wait(int const timeout,
                realloc_ptr<unsigned char> & buffer,
                realloc_ptr<unsigned char> & stream1,
                realloc_ptr<unsigned char> & stream2)
@@ -927,7 +933,7 @@ int GEPD::wait(struct pollfd * const fds, nfds_t const nfds,
     static size_t index_stream1 = 0;
     static size_t index_stream2 = 0;
     int count;
-    while ((count = poll(fds, nfds, timeout)) > 0)
+    while ((count = poll(fds.get(), nfds, timeout)) > 0)
     {
         int status;
         if (count > 0 && fds[INDEX_ERLANG].revents != 0)

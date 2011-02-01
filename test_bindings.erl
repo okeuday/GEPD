@@ -196,11 +196,11 @@ handle_info({Port, {data, Data}},
                     gen_server:reply(Client, {error, Reason}),
                     {noreply, State#state{replies = NewReplies}}
             end;
-        {Stream, Output} when Stream == stdout; Stream == stderr ->
+        {Stream, OsPid, Output} when Stream == stdout; Stream == stderr ->
             FormattedOutput = lists:flatmap(fun(Line) ->
                 io_lib:format("    ~s~n", [Line])
             end, string:tokens(Output, "\n")),
-            io:format("~p:~n~s", [Stream, FormattedOutput]),
+            io:format("~w (pid ~w):~n~s", [Stream, OsPid, FormattedOutput]),
             {noreply, State};
         {Command, Success} ->
             case lists:keytake(Command, 1, Replies) of
