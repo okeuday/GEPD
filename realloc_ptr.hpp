@@ -111,7 +111,7 @@ public:
     {
         if (! reserve(iDst + nSrc))
             return false;
-        memmove(&m_p[iDst], &m_p[iSrc], nSrc);
+        memmove(&(m_p[iDst]), &(m_p[iSrc]), nSrc * sizeof(T));
         return true;
     }
 

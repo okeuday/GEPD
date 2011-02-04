@@ -56,20 +56,26 @@ namespace GEPD
         int const ready      =  78; // external fd is ready
         int const timeout    =  79; // timeout on all fds
         int const errors_min =  80; // errors >=
+        int const error_HUP  = 110;
         int const errors_max = 128; // errors <
     }
 
-    int consume_stream(int fd, short & revents, char const * const name,
+    int consume_stream(int fd, short & revents,
+                       char const * const name, unsigned long const pid,
                        realloc_ptr<unsigned char> & send_buffer,
                        realloc_ptr<unsigned char> & stream, size_t & i);
-    int store_standard_fd(int in, int & out);
+
+    int flush_stream(int fd, short revents,
+                     char const * const name, unsigned long const pid,
+                     realloc_ptr<unsigned char> & send_buffer,
+                     realloc_ptr<unsigned char> & stream, size_t & i);
 
     extern realloc_ptr<struct pollfd> fds;
     extern nfds_t nfds;
 
     int default_main();
     int init();
-    int wait(int const timeout,
+    int wait(int & count, int const timeout,
              realloc_ptr<unsigned char> & buffer,
              realloc_ptr<unsigned char> & stream1,
              realloc_ptr<unsigned char> & stream2);

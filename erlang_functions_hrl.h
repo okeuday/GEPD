@@ -84,7 +84,9 @@
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_double(N) \
     <<CREATE_FUNCTION_ARGUMENTS(_, N, _):64/float-native>>
 #define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_pchar_len(N) \
-    encode(CREATE_FUNCTION_ARGUMENTS(_, N, _))
+    encode_uint8(CREATE_FUNCTION_ARGUMENTS(_, N, _))
+#define ENCODE_ARGUMENT_AS_BINARY_FROM_TYPE_puint32_len(N) \
+    encode_uint32(CREATE_FUNCTION_ARGUMENTS(_, N, _))
 
 #if defined(PORT_DRIVER_NAME)
 
@@ -230,8 +232,15 @@ BOOST_PP_ENUM(BOOST_PP_SEQ_SIZE(FUNCTIONS_SEQUENCE),
 
 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION, _, FUNCTIONS_SEQUENCE)
 
-encode(Value) when erlang:is_list(Value) ->
-    Data = erlang:list_to_binary(Value),
-    DataSize = erlang:byte_size(Data),
+encode_uint8(Value) when erlang:is_list(Value) ->
+    ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
+    Data = erlang:list_to_binary(ValueList),
+    DataSize = erlang:length(ValueList),
+    <<DataSize:32/unsigned-integer-native, Data/binary>>.
+
+encode_uint32(Value) when erlang:is_list(Value) ->
+    ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
+    Data = erlang:list_to_binary(ValueList),
+    DataSize = erlang:length(ValueList),
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 

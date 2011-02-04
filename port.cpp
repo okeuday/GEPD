@@ -407,6 +407,14 @@ extern "C"
     if (ei_encode_string(buffer.get<char>(), &index, returnValue))            \
         return InternalExitStatus::ei_encode_error;
     
+#define GET_TYPE_SIZE_FROM_TYPE_puint32_len(N)                                \
+    sizeof(uint32_t) + *((uint32_t *) &(buffer[(                              \
+        BOOST_PP_CAT(offset_arg, N)                                           \
+    )])) * sizeof(uint32_t)
+#define GET_FUNCTION_ARGUMENT_FROM_TYPE_puint32_len(OFFSET)                   \
+    ((uint32_t *) &(buffer[(OFFSET + sizeof(uint32_t))])),                    \
+    *((uint32_t *) &(buffer[(OFFSET)]))
+    
 namespace
 {
     // list of non-fatal errors that can be sent back
@@ -476,7 +484,7 @@ namespace
             close_unknown                     // 127
         };
 
-        int read_errno()
+        int errno_read()
         {
             switch (errno)
             {
@@ -499,7 +507,7 @@ namespace
             }
         }
 
-        int write_errno()
+        int errno_write()
         {
             switch (errno)
             {
@@ -526,7 +534,7 @@ namespace
             }
         }
 
-        int poll_errno()
+        int errno_poll()
         {
             switch (errno)
             {
@@ -545,7 +553,7 @@ namespace
             }
         }
 
-        int pipe_errno()
+        int errno_pipe()
         {
             switch (errno)
             {
@@ -562,7 +570,7 @@ namespace
             }
         }
 
-        int dup_errno()
+        int errno_dup()
         {
             switch (errno)
             {
@@ -581,7 +589,7 @@ namespace
             }
         }
 
-        int close_errno()
+        int errno_close()
         {
             switch (errno)
             {
@@ -608,7 +616,7 @@ namespace
             if (i <= 0)
             {
                 if (i == -1)
-                    return InternalExitStatus::read_errno();
+                    return InternalExitStatus::errno_read();
                 else
                     return InternalExitStatus::read_null;
             }
@@ -630,7 +638,7 @@ namespace
             if (i <= 0)
             {
                 if (i == -1)
-                    return InternalExitStatus::write_errno();
+                    return InternalExitStatus::errno_write();
                 else
                     return InternalExitStatus::write_null;
             }
@@ -785,6 +793,19 @@ case BOOST_PP_DEC(I):\
         }
     }
 
+    int store_standard_fd(int in, int & out)
+    {
+        int fds[2] = {-1, -1};
+        if (pipe(fds) == -1)
+            return InternalExitStatus::errno_pipe();
+        if (dup2(fds[1], in) == -1)
+            return InternalExitStatus::errno_dup();
+        if (close(fds[1]) == -1)
+            return InternalExitStatus::errno_close();
+        out = fds[0];
+        return InternalExitStatus::success;
+    }
+
     enum
     {
         INDEX_STDOUT = 0,
@@ -793,7 +814,8 @@ case BOOST_PP_DEC(I):\
     };
 }
 
-int GEPD::consume_stream(int fd, short & revents, char const * const name,
+int GEPD::consume_stream(int fd, short & revents,
+                         char const * const name, unsigned long const pid,
                          realloc_ptr<unsigned char> & send_buffer,
                          realloc_ptr<unsigned char> & stream, size_t & i)
 {
@@ -816,7 +838,7 @@ int GEPD::consume_stream(int fd, short & revents, char const * const name,
     if (readBytes == 0 && i == 0)
         return InternalExitStatus::success;
     else if (readBytes == -1)
-        return InternalExitStatus::read_errno();
+        return InternalExitStatus::errno_read();
     i += readBytes; // i is the next index to read at, always
 
     // only send stderr output before the last newline character
@@ -833,7 +855,6 @@ int GEPD::consume_stream(int fd, short & revents, char const * const name,
 
     if (foundNewline)
     {
-        unsigned long const pid = getpid();
         int index = sizeof(OUTPUT_PREFIX_TYPE);
         if (ei_encode_version(send_buffer.get<char>(), &index))
             return InternalExitStatus::ei_encode_error;
@@ -867,16 +888,49 @@ int GEPD::consume_stream(int fd, short & revents, char const * const name,
     return InternalExitStatus::success;
 }
 
-int GEPD::store_standard_fd(int in, int & out)
+int GEPD::flush_stream(int fd, short revents,
+                       char const * const name, unsigned long const pid,
+                       realloc_ptr<unsigned char> & send_buffer,
+                       realloc_ptr<unsigned char> & stream, size_t & i)
 {
-    int fds[2] = {-1, -1};
-    if (pipe(fds) == -1)
-        return InternalExitStatus::pipe_errno();
-    if (dup2(fds[1], in) == -1)
-        return InternalExitStatus::dup_errno();
-    if (close(fds[1]) == -1)
-        return InternalExitStatus::close_errno();
-    out = fds[0];
+    if ((revents & POLLIN) == false)
+        return InternalExitStatus::success;
+
+    ssize_t left = stream.size() - i;
+    ssize_t readBytes;
+    while ((readBytes = read(fd, &stream[i], left)) == left &&
+           stream.grow())
+    {
+        i += left;
+        left = stream.size() - i;
+    }
+    if (readBytes == 0 && i == 0)
+        return InternalExitStatus::success;
+    else if (readBytes != -1)
+        i += readBytes; // i is the next index to read at, always
+
+    size_t const total = i - 1;
+    i = 0;
+
+    int index = sizeof(OUTPUT_PREFIX_TYPE);
+    if (ei_encode_version(send_buffer.get<char>(), &index))
+        return InternalExitStatus::ei_encode_error;
+    if (ei_encode_tuple_header(send_buffer.get<char>(), &index, 3))
+        return InternalExitStatus::ei_encode_error;
+    if (ei_encode_atom(send_buffer.get<char>(), &index, name))
+        return InternalExitStatus::ei_encode_error;
+    if (ei_encode_ulong(send_buffer.get<char>(), &index, pid))
+        return InternalExitStatus::ei_encode_error;
+    if (send_buffer.reserve(index + total + 1) == false)
+        return InternalExitStatus::write_overflow;
+    if (ei_encode_string_len(send_buffer.get<char>(), &index,
+                             stream.get<char>(), total))
+        return InternalExitStatus::ei_encode_error;
+    int status;
+    if ((status = write_cmd(send_buffer, index -
+                            sizeof(OUTPUT_PREFIX_TYPE))))
+        return status;
+
     return InternalExitStatus::success;
 }
 
@@ -899,15 +953,14 @@ int GEPD::default_main()
     int status;
     if ((status = GEPD::init()))
         return status;
-    return GEPD::wait(timeout, buffer, stream1, stream2);
+    int count;
+    return GEPD::wait(count, timeout, buffer, stream1, stream2);
 }
 
 int GEPD::init()
 {
     if (nfds > 0)
-    {
         fds.move(0, nfds, 3);
-    }
 
     int status;
     if ((status = store_standard_fd(1, fds[INDEX_STDOUT].fd)))
@@ -925,14 +978,14 @@ int GEPD::init()
     return InternalExitStatus::success;
 }
 
-int GEPD::wait(int const timeout,
+int GEPD::wait(int & count, int const timeout,
                realloc_ptr<unsigned char> & buffer,
                realloc_ptr<unsigned char> & stream1,
                realloc_ptr<unsigned char> & stream2)
 {
+    static unsigned long const pid = getpid();
     static size_t index_stream1 = 0;
     static size_t index_stream2 = 0;
-    int count;
     while ((count = poll(fds.get(), nfds, timeout)) > 0)
     {
         int status;
@@ -948,7 +1001,7 @@ int GEPD::wait(int const timeout,
         {
             if ((status = consume_stream(fds[INDEX_STDERR].fd, 
                                          fds[INDEX_STDERR].revents,
-                                         "stderr", buffer,
+                                         "stderr", pid, buffer,
                                          stream2, index_stream2)))
                 return status;
             --count;
@@ -957,19 +1010,17 @@ int GEPD::wait(int const timeout,
         {
             if ((status = consume_stream(fds[INDEX_STDOUT].fd, 
                                          fds[INDEX_STDOUT].revents,
-                                         "stdout", buffer,
+                                         "stdout", pid, buffer,
                                          stream1, index_stream1)))
                 return status;
             --count;
         }
         if (count > 0)
-        {
             return GEPD::ExitStatus::ready;
-        }
     }
     if (count == 0)
         return GEPD::ExitStatus::timeout;
     else
-        return InternalExitStatus::poll_errno();
+        return InternalExitStatus::errno_poll();
 }
 
