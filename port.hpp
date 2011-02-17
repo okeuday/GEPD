@@ -47,6 +47,10 @@
 
 #include <poll.h>
 #include "realloc_ptr.hpp"
+#ifdef _POLL_EMUL_H_
+  typedef unsigned int nfds_t;
+#endif
+
 
 namespace GEPD
 {
