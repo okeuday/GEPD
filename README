@@ -42,7 +42,14 @@ Some of the newer features in port_driver.cpp require erts >= 5.6.
 Boost is required for the preprocessor macro expansion code
 (http://www.boost.org/).
 
-./make.sh
+To build with cmake:
+  mkdir build
+  cd build
+  cmake ..
+  make
+
+To build with the make script:
+  ./make.sh
 
 
 RUNNING
