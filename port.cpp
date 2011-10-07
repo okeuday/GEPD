@@ -44,6 +44,7 @@
 
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
@@ -407,7 +408,8 @@ extern "C"
         return GEPD::ExitStatus::write_overflow;                              \
     if (ei_encode_binary(buffer.get<char>(), &index,                          \
                          returnValue.pchar, returnValue.length))              \
-        return GEPD::ExitStatus::ei_encode_error;
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    free(returnValue.pchar);
 
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
     char const * returnValue =

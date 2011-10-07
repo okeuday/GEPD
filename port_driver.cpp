@@ -46,6 +46,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <cstring>
+#include <cstdlib>
 
 #include <boost/preprocessor/tuple/elem.hpp>
 #include <boost/preprocessor/tuple/to_seq.hpp>
@@ -520,7 +521,8 @@ extern "C"
         ASYNC != 0, \
         BOOST_PP_CAT(PREFIX, pchar_len.pchar),\
         BOOST_PP_CAT(PREFIX, pchar_len.length)\
-    );
+    );\
+    free(BOOST_PP_CAT(PREFIX, pchar_len.pchar));
 
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar(PREFIX) \
     BOOST_PP_CAT(PREFIX, bin.ptr._char) =
