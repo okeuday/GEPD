@@ -1,7 +1,7 @@
 #!/bin/sh
 ERLANG_INSTALL=/usr/local
-ERTS_PATH=$ERLANG_INSTALL/lib/erlang/erts-5.8.2
-ERL_INTERFACE_PATH=$ERLANG_INSTALL/lib/erlang/lib/erl_interface-3.7.2
+ERTS_PATH=$ERLANG_INSTALL/lib/erlang/erts-5.8.3
+ERL_INTERFACE_PATH=$ERLANG_INSTALL/lib/erlang/lib/erl_interface-3.7.3
 CURRENT_VERSION=vsn-1
 
 gcc -g -O0 -I$ERTS_PATH/include/ -o test_functions.o -c -fpic test_functions.c

@@ -1,4 +1,4 @@
-GENERIC ERLANG PORT [DRIVER] (GEP[D]), VERSION 0.7 (Jan 22 2011)
+GENERIC ERLANG PORT [DRIVER] (GEP[D]), VERSION 0.8 (Oct 6 2011)
 
 PURPOSE
 -------------------------------------------------
@@ -82,4 +82,10 @@ BSD license
 CONTACT
 -------------------------------------------------
 Michael Truog <mjtruog at gmail dot com>
+
+
+THANKS
+-------------------------------------------------
+Matt Stancliff                 GEPD CMake integration
+Scott Lystig Fritchie          EDTK (Erlang Driver Tool Kit)
 

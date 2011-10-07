@@ -1,7 +1,7 @@
 %%% -*- Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-%%% GENERIC ERLANG PORT [DRIVER] VERSION 0.7
+%%% GENERIC ERLANG PORT [DRIVER] VERSION 0.8
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% BSD LICENSE
@@ -58,6 +58,9 @@
 
 -include("erlang_functions.hrl").
 
+% testing port driver by default, uncomment to test port
+%-undef(ERL_PORT_DRIVER_NAME).
+
 -record(state, {last_port_name,
                 replies = [],
                 port = undefined}).
@@ -91,6 +94,7 @@ test() ->
                                   "abcdefgh", $i, 
                                   "jklmnop", $q, 
                                   "rstuvwxy", $z),
+    {ok, <<"Hello World!">>} = test_bindings:hello_test1(?MODULE),
     {error, "Invalid function call"} = erroneous_call(?MODULE),
     ok.
 

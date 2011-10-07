@@ -1,7 +1,7 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT VERSION 0.7
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.8
 // automatically create Erlang bindings to C++/C that requires an OS process
 
 //////////////////////////////////////////////////////////////////////////////
@@ -64,6 +64,7 @@
 
 #include "port.hpp"
 #include "realloc_ptr.hpp"
+#include "pchar_len_t.h"
 
 // erlang:open_port/2 option nouse_stdio
 #define PORT_READ_FILE_DESCRIPTOR 3
@@ -393,6 +394,21 @@ extern "C"
 #define GET_FUNCTION_ARGUMENT_FROM_TYPE_pchar_len(OFFSET)                     \
     ((char *) &(buffer[(OFFSET + sizeof(uint32_t))])),                        \
     *((uint32_t *) &(buffer[(OFFSET)]))
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t                   \
+    pchar_len_t returnValue =
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t(CMD)                              \
+    if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (buffer.reserve(index + returnValue.length) == false)                  \
+        return GEPD::ExitStatus::write_overflow;                              \
+    if (ei_encode_binary(buffer.get<char>(), &index,                          \
+                         returnValue.pchar, returnValue.length))              \
+        return GEPD::ExitStatus::ei_encode_error;
+
 #define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
     char const * returnValue =
 #define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \

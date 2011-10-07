@@ -32,10 +32,14 @@
     ((pchar_test1,     1, (pchar_len),            pchar,                  0)) \
     ((time_test1,      1, (time_t),               pchar,                  0)) \
     ((float_test2,     1, (double),               float,                  0)) \
-    ((integer_test2,   4, (int8_t,int16_t,int32_t,int64_t),     int32_t,  0)) \
-    ((integer_test3,   4, (uint8_t,uint16_t,uint32_t,uint64_t), uint32_t, 0)) \
-    ((pchar_test2,     6, (pchar_len, char, pchar_len, char, \
-                           pchar_len, char),                    pchar,    0))
+    ((integer_test2,   4, (int8_t, int16_t,                                   \
+                           int32_t, int64_t),     int32_t,                0)) \
+    ((integer_test3,   4, (uint8_t, uint16_t,                                 \
+                           uint32_t, uint64_t),   uint32_t,               0)) \
+    ((pchar_test2,     6, (pchar_len, char,                                   \
+                           pchar_len, char,                                   \
+                           pchar_len, char),      pchar,                  0)) \
+    ((hello_test1,     0, (),                     pchar_len_t,            0))
 
 //////////////////////////////////////////////////////////////////////////////
 // Port Declaration
@@ -78,5 +82,6 @@
 #define PORT_NAME \
     BOOST_PP_CAT(BOOST_PP_CAT(PORT_NAME_PREFIX, _), CURRENT_VERSION)
 #endif
+
 
 #endif // TEST_BINDINGS_H

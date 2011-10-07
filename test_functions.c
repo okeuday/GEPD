@@ -5,6 +5,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // test asynchronous/synchronous call mechanism (and a void return value)
 void sleep_test1(uint32_t arg)
@@ -86,5 +87,18 @@ char * pchar_test2(char * p1, uint32_t l1, char c1,
     pchar_test2_data[l1 + l2 + l3 + 2] = c3;
     pchar_test2_data[l1 + l2 + l3 + 3] = '\0';
     return pchar_test2_data;
+}
+
+pchar_len_t hello_test1()
+{
+    pchar_len_t hello;
+    char const * message = "Hello World!";
+    /* do not include a '\0' character,
+     * Erlang detects it is a binary string with magic!
+     */
+    hello.pchar = malloc(12);
+    memcpy(hello.pchar, message, 12);
+    hello.length = 12;
+    return hello;
 }
 

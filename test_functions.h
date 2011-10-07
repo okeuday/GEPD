@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <time.h>
+#include "pchar_len_t.h"
+
 void sleep_test1(uint32_t arg);
 void sleep_test2(uint32_t arg);
 uint64_t integer_test1();
@@ -21,5 +23,6 @@ uint32_t integer_test3(uint8_t size1, uint16_t size2,
 char * pchar_test2(char * p1, uint32_t l1, char c1,
                    char * p2, uint32_t l2, char c2,
                    char * p3, uint32_t l3, char c3);
+pchar_len_t hello_test1();
 
 #endif // TEST_FUNCTIONS_H

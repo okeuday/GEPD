@@ -1,7 +1,7 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT DRIVER VERSION 0.7
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.8
 // automatically create efficient Erlang bindings to C++/C 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -63,6 +63,8 @@
 #include <boost/preprocessor/punctuation/paren.hpp>
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/cat.hpp>
+
+#include "pchar_len_t.h"
 
 // port driver documentation:
 // http://erlang.org/doc/man/erl_driver.html
@@ -506,6 +508,20 @@ extern "C"
     driver_binary_inc_refc(BOOST_PP_CAT(PREFIX, _._bin.ref));
 #define CREATE_FUNCTION_OUTPUT_PROCESS_TYPE_pchar_len(PREFIX, PTR, LEN) \
     driver_binary_dec_refc(BOOST_PP_CAT(PREFIX, _._bin.ref));
+#define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t(PREFIX) \
+    BOOST_PP_CAT(PREFIX, pchar_len) =
+#define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_pchar_len_t \
+    BOOST_PP_EMPTY()
+#define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_pchar_len_t(CMD, ASYNC, \
+                                                             PREFIX) \
+    reply_data_binary(\
+        desc, \
+        CMD, \
+        ASYNC != 0, \
+        BOOST_PP_CAT(PREFIX, pchar_len.pchar),\
+        BOOST_PP_CAT(PREFIX, pchar_len.length)\
+    );
+
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar(PREFIX) \
     BOOST_PP_CAT(PREFIX, bin.ptr._char) =
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_pchar \
@@ -824,6 +840,7 @@ typedef struct
                               PORT_DRIVER_AVAILABLE_TYPES)    
         unsigned char _uchar;
         float _float;
+        pchar_len_t _pchar_len;
         struct
         {
             uint32_t length;
