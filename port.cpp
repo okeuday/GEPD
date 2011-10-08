@@ -395,9 +395,9 @@ extern "C"
 #define GET_FUNCTION_ARGUMENT_FROM_TYPE_pchar_len(OFFSET)                     \
     ((char *) &(buffer[(OFFSET + sizeof(uint32_t))])),                        \
     *((uint32_t *) &(buffer[(OFFSET)]))
-#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t                   \
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_nofree            \
     pchar_len_t returnValue =
-#define STORE_RETURN_VALUE_TYPE_pchar_len_t(CMD)                              \
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t_nofree(CMD)                       \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
         return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
@@ -408,12 +408,20 @@ extern "C"
         return GEPD::ExitStatus::write_overflow;                              \
     if (ei_encode_binary(buffer.get<char>(), &index,                          \
                          returnValue.pchar, returnValue.length))              \
-        return GEPD::ExitStatus::ei_encode_error;                             \
+        return GEPD::ExitStatus::ei_encode_error;
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_free              \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t_free(CMD)                         \
+    STORE_RETURN_VALUE_TYPE_pchar_len_t_nofree(CMD)                           \
     free(returnValue.pchar);
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t                   \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_free
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t(CMD)                              \
+    STORE_RETURN_VALUE_TYPE_pchar_len_t_free(CMD)
 
-#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree                  \
     char const * returnValue =
-#define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
+#define STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)                             \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
         return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
@@ -424,6 +432,15 @@ extern "C"
         return GEPD::ExitStatus::write_overflow;                              \
     if (ei_encode_string(buffer.get<char>(), &index, returnValue))            \
         return GEPD::ExitStatus::ei_encode_error;
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_free                    \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar_free(CMD)                               \
+    STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)                                 \
+    free(returnValue);
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
+    STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)
     
 #define GET_TYPE_SIZE_FROM_TYPE_puint32_len(N)                                \
     sizeof(uint32_t) + *((uint32_t *) &(buffer[(                              \

@@ -6,6 +6,22 @@
        for code upgrades/downgrades
 #endif
 
+// SUPPORTED FUNCTION ARGUMENT TYPES:
+// int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+// bool, char, uchar, double, time_t, pchar_len, puint32_len
+// (pchar_len represents two function arguments: char* and uint32_t
+//  puint32_len represents two function arguments: uint32_t* and uint32_t
+//  function argument memory is managed externally and should never be freed)
+
+// SUPPORTED FUNCTION RETURN VALUE TYPES:
+// int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+// bool, char, uchar, double, float, time_t, void,
+// pchar, pchar_free, pchar_nofree,
+// pchar_len_t, pchar_len_t_free, pchar_len_t_nofree
+// (pchar == pchar_nofree, pchar_len_t == pchar_len_t_free,
+//  pchar returns an Erlang string, i.e., list of integers,
+//  pchar_len_t return an Erlang binary)
+
 //////////////////////////////////////////////////////////////////////////////
 // Port Driver Declaration
 //////////////////////////////////////////////////////////////////////////////
@@ -29,8 +45,8 @@
     ((char_test1,      1, (char),                 char,                   0)) \
     ((char_test2,      1, (uchar),                uchar,                  0)) \
     ((float_test1,     0, (),                     float,                  0)) \
-    ((pchar_test1,     1, (pchar_len),            pchar,                  0)) \
-    ((time_test1,      1, (time_t),               pchar,                  0)) \
+    ((pchar_test1,     1, (pchar_len),            pchar_nofree,           0)) \
+    ((time_test1,      1, (time_t),               pchar_nofree,           0)) \
     ((float_test2,     1, (double),               float,                  0)) \
     ((integer_test2,   4, (int8_t, int16_t,                                   \
                            int32_t, int64_t),     int32_t,                0)) \
@@ -38,8 +54,8 @@
                            uint32_t, uint64_t),   uint32_t,               0)) \
     ((pchar_test2,     6, (pchar_len, char,                                   \
                            pchar_len, char,                                   \
-                           pchar_len, char),      pchar,                  0)) \
-    ((hello_test1,     0, (),                     pchar_len_t,            0))
+                           pchar_len, char),      pchar_nofree,           0)) \
+    ((hello_test1,     0, (),                     pchar_len_t_free,       0))
 
 //////////////////////////////////////////////////////////////////////////////
 // Port Declaration
