@@ -33,6 +33,7 @@ Features:
 
 Caveat:
 
+(This is no longer true for Erlang >= R15)
 The generated port driver code can not be used for hot code updating
 if it performs an asynchronous call because erts will lock the driver
 (making it "permanent") with driver_lock_driver()
