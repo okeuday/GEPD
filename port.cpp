@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT [DRIVER] VERSION 0.8
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.9
 // automatically create Erlang bindings to C++/C that requires an OS process
 
 //////////////////////////////////////////////////////////////////////////////
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -82,6 +82,7 @@
 #endif
 #if ! defined(PORT_FUNCTIONS)
 #if defined(PORT_DRIVER_FUNCTIONS)
+// Using PORT_DRIVER_FUNCTIONS to determine PORT_FUNCTIONS
 
 #define CREATE_PORT_FUNCTIONS_DEFINITION(S, DATA, ELEMENT) (\
     BOOST_PP_TUPLE_ELEM(5, 0, ELEMENT),\
@@ -92,7 +93,6 @@
 #define PORT_FUNCTIONS \
     BOOST_PP_SEQ_TRANSFORM(CREATE_PORT_FUNCTIONS_DEFINITION, _, \
                            PORT_DRIVER_FUNCTIONS)
-#warning Using PORT_DRIVER_FUNCTIONS to determine PORT_FUNCTIONS
 #else
 #error Define PORT_FUNCTIONS within the functions header file to specify \
        the functions and their types

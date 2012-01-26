@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT [DRIVER] VERSION 0.8
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.9
 // automatically create efficient Erlang bindings to C++/C 
 
 //////////////////////////////////////////////////////////////////////////////
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,11 @@
 //////////////////////////////////////////////////////////////////////////////
 
 #include <erl_driver.h>
+// R15 type for pre-R15 port driver compilation
+#if ERL_DRV_EXTENDED_MAJOR_VERSION == 1
+typedef int ErlDrvSizeT;
+typedef int ErlDrvSSizeT;
+#endif
 #include <stdint.h>
 #include <errno.h>
 #include <cstring>
@@ -75,7 +80,6 @@
 // (increasing this increases the (heap) memory consumption for
 //  asynchronous function calls and the stack size of synchronous calls)
 #define PORT_DRIVER_FUNCTIONS_MAXIMUM_ARGUMENTS 9
-
 
 #if ! defined(PORT_DRIVER_NAME)
 #error Define PORT_DRIVER_NAME within the functions header file to specify the \
@@ -740,60 +744,62 @@ case BOOST_PP_DEC(I):\
 
 // int EV_GET_CHAR(ErlIOVec *ev, char *p, size_t &p, size_t &q)
 #define EV_GET_CHAR(ev, ptr, p, q)                                    \
-    (p + 1 <= (ev)->iov[q].iov_len                              \
-     ? (*(ptr) = *EV_CHAR_P(ev, p, q),                          \
-             p =   (p + 1 < (ev)->iov[q].iov_len               \
-                 ?  p + 1                                          \
-                 : (q++, 0)),                                   \
-        0)                                                           \
+    (p + 1 <= (ev)->iov[q].iov_len                                    \
+     ? (*(ptr) = *EV_CHAR_P(ev, p, q),                                \
+             p =   (p + 1 < (ev)->iov[q].iov_len                      \
+                 ?  p + 1                                             \
+                 : (q++, 0)),                                         \
+        0)                                                            \
      : !0)
 
 #define EV_GET_UINT8(ev, p, pp, qp) EV_GET_CHAR(ev, p, pp, qp)
 
 // int EV_GET_UINT16(ErlIOVec *ev, uint16_t *p, size_t &p, size_t &q)
 #define EV_GET_UINT16(ev, ptr, p, q)                                  \
-    (p + 2 <= (ev)->iov[q].iov_len                              \
-     ? (*((uint16_t *) ptr) = (*((uint16_t *) EV_UCHAR_P(ev, p, q))),   \
-             p =   (p + 2 < (ev)->iov[q].iov_len               \
-                 ?  p + 2                                          \
-                 : (q++, 0)),                                   \
-        0)                                                           \
+    (p + 2 <= (ev)->iov[q].iov_len                                    \
+     ? (*((uint16_t *) ptr) = (*((uint16_t *) EV_UCHAR_P(ev, p, q))), \
+             p =   (p + 2 < (ev)->iov[q].iov_len                      \
+                 ?  p + 2                                             \
+                 : (q++, 0)),                                         \
+        0)                                                            \
      : !0)
 
 // int EV_GET_UINT32(ErlIOVec *ev, uint32_t *p, size_t &p, size_t &q)
 #define EV_GET_UINT32(ev, ptr, p, q)                                  \
-    (p + 4 <= (ev)->iov[q].iov_len                              \
-     ? (*((uint32_t *) ptr) = (*((uint32_t *) EV_UCHAR_P(ev, p, q))),   \
-             p =   (p + 4 < (ev)->iov[q].iov_len               \
-                 ?  p + 4                                          \
-                 : (q++, 0)),                                   \
+    (p + 4 <= (ev)->iov[q].iov_len                                    \
+     ? (*((uint32_t *) ptr) = (*((uint32_t *) EV_UCHAR_P(ev, p, q))), \
+             p =   (p + 4 < (ev)->iov[q].iov_len                      \
+                 ?  p + 4                                             \
+                 : (q++, 0)),                                         \
         0) \
      : !0)
 
 // int EV_GET_UINT64(ErlIOVec *ev, uint64_t *p, size_t &p, size_t &q)
 #define EV_GET_UINT64(ev, ptr, p, q)                                  \
-    (p + 8 <= (ev)->iov[q].iov_len                              \
-     ? (*((uint64_t *) ptr) = (*((uint64_t *) EV_UCHAR_P(ev, p, q))),   \
-             p =   (p + 8 < (ev)->iov[q].iov_len               \
-                 ?  p + 8                                          \
-                 : (q++, 0)),                                   \
+    (p + 8 <= (ev)->iov[q].iov_len                                    \
+     ? (*((uint64_t *) ptr) = (*((uint64_t *) EV_UCHAR_P(ev, p, q))), \
+             p =   (p + 8 < (ev)->iov[q].iov_len                      \
+                 ?  p + 8                                             \
+                 : (q++, 0)),                                         \
         0) \
      : !0)
 
 // void * EV_GETPOS(ErlIOVec *ev, size_t &p, size_t &q)
 #define EV_GETPOS(ev, p, q)                                           \
-    ((q) < (ev)->vsize                                                \
+    ((q) < ((ev)->vsize < 0 ? 0 : (size_t) (ev)->vsize)               \
     ? ((ev)->iov[(q)].iov_base + p)                                   \
     : 0)
 
 /// increment the position within the ErlIOVec by the size n
 /// 
 /// @return -1 on error, 0 no more data, 1 more data
-static int ev_incr(ErlIOVec *ev, int n, size_t & p, size_t & q)
+static int ev_incr(ErlIOVec *ev, size_t n, size_t & p, size_t & q)
 {
-    const int pos = p + n;
+    const size_t pos = p + n;
+    if (ev->vsize < 0)
+        return -1;
 
-    if (q >= ev->vsize)
+    if (q >= static_cast<size_t>(ev->vsize))
         return -1;
 
     if (pos < ev->iov[q].iov_len)
@@ -805,7 +811,7 @@ static int ev_incr(ErlIOVec *ev, int n, size_t & p, size_t & q)
     {
         q++;
         p = 0;
-        if (q < ev->vsize)
+        if (q < static_cast<size_t>(ev->vsize))
             return 1;
         else
             return 0;
@@ -902,7 +908,7 @@ static ErlDrvTermData const atom_value_false =
 static int driver_output_term_locked(ErlDrvMutex * mutex, 
                                      ErlDrvPort port,
                                      ErlDrvTermData * term,
-                                     int n)
+                                     ErlDrvSizeT n)
 {
     // Regarding driver_output_term() in R12B-5:
     // "Note that this function is not thread-safe, 
@@ -1091,7 +1097,7 @@ static int driver_entry_init()
     return 0;
 }
 
-static ErlDrvData driver_entry_start(ErlDrvPort port, char *args)
+static ErlDrvData driver_entry_start(ErlDrvPort port, char * /*args*/)
 {
     descriptor_t *desc =
         reinterpret_cast<descriptor_t *>(driver_alloc(sizeof(descriptor_t)));
@@ -1248,6 +1254,10 @@ static ErlDrvEntry driver_entry_functions = {
     // process_exit
     //
     // Called when a process monitor fires
+    0,
+    // stop_select
+    //
+    // Called after a driver_select event object can be safely closed
     0
 };
 

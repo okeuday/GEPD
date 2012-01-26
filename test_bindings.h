@@ -71,7 +71,8 @@
 //#define PORT_CXX_FUNCTIONS_HEADER_FILE "test_functions.h"
 
 // not necessary if PORT_DRIVER_FUNCTIONS is defined
-//#define PORT_FUNCTIONS \
+/*
+#define PORT_FUNCTIONS \
     ((sleep_test1,     1, (uint32_t),                          void    )) \
     ((sleep_test2,     1, (uint32_t),                          void    )) \
     ((integer_test1,   0, (),                                  uint64_t)) \
@@ -85,6 +86,7 @@
     ((integer_test3,   4, (uint8_t,uint16_t,uint32_t,uint64_t),uint32_t)) \
     ((pchar_test2,     6, (pchar_len, char, pchar_len, char, \
                            pchar_len, char), pchar))
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -1,4 +1,4 @@
-#GENERIC ERLANG PORT \[DRIVER\] (GEP[D]), VERSION 0.8 (Oct 6 2011)
+#GENERIC ERLANG PORT \[DRIVER\] (GEP[D]), VERSION 0.9 (Jan 25 2012)
 
 ## PURPOSE
 
@@ -44,7 +44,7 @@ operation would create instability after a hot code update.
 
 ## BUILDING
 
-Some of the newer features in port_driver.cpp requires
+Some of the features in port_driver.cpp requires
 erts >= 5.6.1 (Erlang >= R12B01).
 Boost is required for the preprocessor macro expansion code
 ([http://www.boost.org/](http://www.boost.org/)).
@@ -66,20 +66,24 @@ To build with the make script:
 The test_bindings code should generate output similar to:
 
     $ erl +A 16
-    Erlang R13B02 (erts-5.7.3) [source] [64-bit] [smp:4:4] [rq:4] [async-threads:16] [kernel-poll:false]
+    Erlang R14B04 (erts-5.8.5) [source] [64-bit] [smp:2:2] [rq:2] [async-threads:16] [kernel-poll:false]
     
-    Eshell V5.7.3  (abort with ^G)
+    Eshell V5.8.5  (abort with ^G)
     1> test_bindings:start().
     using port driver
     {ok,<0.35.0>}
-    2> test_bindings:test(). 
+    2> test_bindings:test().
     sync sleep
     async sleep
     ...
-    ok
-    3>
-    async function call returned: {ok,ok}
-    3>
+    stdout writing before 2 second sleep
+                                        ok
+    3> stdout writing after 2 second sleep
+                                          stderr
+                                                line
+                                                    break(s)
+                                                            missasync function call returned: {ok,ok}
+    3> 
 
 
 ## LICENSE
