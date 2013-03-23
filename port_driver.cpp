@@ -47,6 +47,10 @@
 #if ERL_DRV_EXTENDED_MAJOR_VERSION == 1
 typedef int ErlDrvSizeT;
 typedef int ErlDrvSSizeT;
+#elif ((ERL_DRV_EXTENDED_MAJOR_VERSION == 2 && \
+        ERL_DRV_EXTENDED_MINOR_VERSION == 1) || \
+       ERL_DRV_EXTENDED_MAJOR_VERSION > 2)
+#define ERLANG_R16_SUPPORT
 #endif
 #include <stdint.h>
 #include <errno.h>
@@ -905,8 +909,25 @@ static ErlDrvTermData const atom_value_true =
 static ErlDrvTermData const atom_value_false =
     driver_mk_atom(const_cast<char *>("false"));
 
-static int driver_output_term_locked(ErlDrvMutex * mutex, 
-                                     ErlDrvPort port,
+#ifdef ERLANG_R16_SUPPORT
+static int driver_output_term_locked(descriptor_t * desc,
+                                     ErlDrvTermData * term,
+                                     ErlDrvSizeT n)
+{
+    // Regarding erl_drv_output_term() in R16B:
+    // "This function is only thread-safe when the emulator with
+    //  SMP support is used."
+    // (http://www.erlang.org/doc/man/erl_driver.html#erl_drv_output_term)
+
+    // ErlDrvSysInfo can not be checked since it is only provided to
+    // system drivers, so locking will still be done manually
+    erl_drv_mutex_lock(desc->driver_output_term_lock);
+    int const returnValue = erl_drv_output_term(desc->port_term, term, n);
+    erl_drv_mutex_unlock(desc->driver_output_term_lock);
+    return returnValue;
+}
+#else
+static int driver_output_term_locked(descriptor_t * desc,
                                      ErlDrvTermData * term,
                                      ErlDrvSizeT n)
 {
@@ -918,13 +939,14 @@ static int driver_output_term_locked(ErlDrvMutex * mutex,
     // since asynchronous thread pool threads could call this function,
     // in addition to a callback emulator thread, unstable behavior
     // could occur without a mutex lock
-    erl_drv_mutex_lock(mutex);
-    int returnValue = driver_output_term(port, term, n);
-    erl_drv_mutex_unlock(mutex);
+    erl_drv_mutex_lock(desc->driver_output_term_lock);
+    int const returnValue = driver_output_term(desc->port, term, n);
+    erl_drv_mutex_unlock(desc->driver_output_term_lock);
     return returnValue;
 }
+#endif
 
-static int reply_data_ok(descriptor_t *desc, uint16_t cmd, bool async)
+static int reply_data_ok(descriptor_t * desc, uint16_t cmd, bool async)
 {
     ErlDrvTermData spec[] = {
         ERL_DRV_PORT, desc->port_term,
@@ -935,12 +957,12 @@ static int reply_data_ok(descriptor_t *desc, uint16_t cmd, bool async)
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port, 
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
 #define CREATE_REPLY_OK_INTEGER(TYPE, ERLTYPE)                               \
-static int reply_data_integer(descriptor_t *desc, uint16_t cmd, bool async,  \
+static int reply_data_integer(descriptor_t * desc, uint16_t cmd, bool async, \
                               TYPE number)                                   \
 {                                                                            \
     ErlDrvTermData spec[] = {                                                \
@@ -952,8 +974,7 @@ static int reply_data_integer(descriptor_t *desc, uint16_t cmd, bool async,  \
         ERL_DRV_TUPLE, 2,                                                    \
         ERL_DRV_TUPLE, 2                                                     \
     };                                                                       \
-    return driver_output_term_locked(desc->driver_output_term_lock,          \
-                                     desc->port, spec,                       \
+    return driver_output_term_locked(desc, spec,                             \
                                      sizeof(spec) / sizeof(spec[0]));        \
 }
 CREATE_REPLY_OK_INTEGER(char,     ERL_DRV_INT)
@@ -980,7 +1001,7 @@ static int reply_data_boolean(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
@@ -996,7 +1017,7 @@ static int reply_data_double(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
@@ -1013,7 +1034,7 @@ static int reply_data_binary(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
@@ -1031,7 +1052,7 @@ static int reply_data_binary(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
@@ -1048,7 +1069,7 @@ static int reply_data_string(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 
@@ -1084,7 +1105,7 @@ static int reply_data_error_string(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
     };
-    return driver_output_term_locked(desc->driver_output_term_lock, desc->port,
+    return driver_output_term_locked(desc,
                                      spec, sizeof(spec) / sizeof(spec[0]));
 }
 

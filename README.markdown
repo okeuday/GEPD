@@ -8,17 +8,19 @@ for C/C++ bindings using a single self-contained file.
 
 Files:
 
-* test_bindings.h contains the ONLY configuration to support the C functions
-  (in test_functions.h and test_functions.c)
-* test_bindings.erl provides the gen_server to manage the port or port driver
-* erlang_functions_hrl.h creates the erlang function interface
-* port_driver.cpp provides the Erlang port driver implementation
-* port.cpp and port.hpp provide the Erlang port implementation
+* `test_bindings.h` contains the ONLY configuration to support the C functions
+  (in `test_functions.h` and `test_functions.c`)
+* `test_bindings.erl` provides the `gen_server` to manage the port or
+  port driver
+* `erlang_functions_hrl.h` creates the erlang function interface
+* `port_driver.cpp` provides the Erlang port driver implementation
+* `port.cpp` and `port.hpp` provide the Erlang port implementation
 
-Whether PORT_DRIVER_NAME_PREFIX or PORT_NAME_PREFIX is defined determines
-if a port driver or port is built, respectively (in test_bindings.h).
+Whether `PORT_DRIVER_NAME_PREFIX` or `PORT_NAME_PREFIX` is defined determines
+if a port driver or port is built, respectively (in `test_bindings.h`).
 If both are defined, both are built and the port driver is used within
-test_bindings.erl (undefine "ERL_PORT_DRIVER_NAME" if you want to use the port).
+`test_bindings.erl` (undefine `ERL_PORT_DRIVER_NAME` if you want to use
+the port).
 
 
 Features:
@@ -33,19 +35,19 @@ Features:
 
 Caveat:
 
-(This is no longer true for Erlang >= R15)
+(This is no longer true for `Erlang >= R15`)
 The generated port driver code can not be used for hot code updating
 if it performs an asynchronous call because erts will lock the driver
-(making it "permanent") with driver_lock_driver()
-(http://erlang.org/doc/man/erl_driver.html#driver_lock_driver).
+(making it "permanent") with `driver_lock_driver()`
+(`http://erlang.org/doc/man/erl_driver.html#driver_lock_driver`).
 With the driver locked, there is no possibility that an async
 operation would create instability after a hot code update.
 
 
 ## BUILDING
 
-Some of the features in port_driver.cpp requires
-erts >= 5.6.1 (Erlang >= R12B01).
+Some of the features in `port_driver.cpp` requires
+`erts >= 5.6.1` (`Erlang >= R12B01`).
 Boost is required for the preprocessor macro expansion code
 ([http://www.boost.org/](http://www.boost.org/)).
 
@@ -63,12 +65,12 @@ To build with the make script:
 
 ## RUNNING
 
-The test_bindings code should generate output similar to:
+The `test_bindings` code should generate output similar to:
 
     $ erl +A 16
-    Erlang R14B04 (erts-5.8.5) [source] [64-bit] [smp:2:2] [rq:2] [async-threads:16] [kernel-poll:false]
+    Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:16] [kernel-poll:false]
     
-    Eshell V5.8.5  (abort with ^G)
+    Eshell V5.10.1  (abort with ^G)
     1> test_bindings:start().
     using port driver
     {ok,<0.35.0>}
