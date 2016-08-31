@@ -969,7 +969,7 @@ static int reply_data_integer(descriptor_t * desc, uint16_t cmd, bool async, \
         ERL_DRV_PORT, desc->port_term,                                       \
         ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),          \
         ERL_DRV_UINT, cmd,                                                   \
-        ERLTYPE, number,                                                     \
+        ERLTYPE, static_cast<ErlDrvTermData>(number),                        \
         ERL_DRV_TUPLE, 2,                                                    \
         ERL_DRV_TUPLE, 2,                                                    \
         ERL_DRV_TUPLE, 2                                                     \
@@ -1029,7 +1029,7 @@ static int reply_data_binary(descriptor_t *desc, uint16_t cmd, bool async,
         ERL_DRV_ATOM, (async ? atom_value_async : atom_value_data),
         ERL_DRV_UINT, cmd,
         ERL_DRV_BINARY, reinterpret_cast<ErlDrvTermData>(ptr),
-                        ptr->orig_size, 0,
+                        static_cast<ErlDrvTermData>(ptr->orig_size), 0,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2,
         ERL_DRV_TUPLE, 2
