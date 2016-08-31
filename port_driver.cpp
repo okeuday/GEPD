@@ -115,7 +115,8 @@ typedef int ErlDrvSSizeT;
                             || defined(__ia64__)                             \
                             || defined(__ppc64__)                            \
                             || defined(__s390x__)                            \
-                            || defined(__x86_64__))
+                            || defined(__x86_64__)                           \
+                            || defined(__aarch64__))
 
 // define the structure of the PORT_DRIVER_FUNCTIONS macro data
 // (sequence of tuples)
