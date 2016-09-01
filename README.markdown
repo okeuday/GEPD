@@ -1,4 +1,4 @@
-#GENERIC ERLANG PORT \[DRIVER\] (GEP[D]), VERSION 0.9.1 (Mar 23 2013)
+#GENERIC ERLANG PORT \[DRIVER\] (GEP[D]), VERSION 0.9.5 (August 31 2016)
 
 ## PURPOSE
 
@@ -68,9 +68,6 @@ To build with the make script:
 The `test_bindings` code should generate output similar to:
 
     $ erl +A 16
-    Erlang R16B (erts-5.10.1) [source] [64-bit] [smp:8:8] [async-threads:16] [kernel-poll:false]
-    
-    Eshell V5.10.1  (abort with ^G)
     1> test_bindings:start().
     using port driver
     {ok,<0.35.0>}

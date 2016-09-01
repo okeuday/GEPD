@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT [DRIVER] VERSION 0.9
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.9.5
 // automatically create efficient Erlang bindings to C++/C 
 
 //////////////////////////////////////////////////////////////////////////////
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -52,15 +52,22 @@ typedef int ErlDrvSSizeT;
        ERL_DRV_EXTENDED_MAJOR_VERSION > 2)
 #define ERLANG_R16_SUPPORT
 #endif
+#if ((ERL_DRV_EXTENDED_MAJOR_VERSION == 3 && \
+      ERL_DRV_EXTENDED_MINOR_VERSION >= 3) || \
+     ERL_DRV_EXTENDED_MAJOR_VERSION > 3)
+#define ERLANG_19_SUPPORT
+#endif
 #include <stdint.h>
 #include <errno.h>
 #include <cstring>
 #include <cstdlib>
 
+#include <boost/preprocessor/tuple/rem.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
 #include <boost/preprocessor/tuple/to_seq.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
+#include <boost/preprocessor/seq/to_tuple.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/repetition/enum.hpp>
@@ -194,8 +201,8 @@ extern "C"
 // (adding to PORT_DRIVER_AVAILABLE_TYPES requires additions below)
 
 // bool
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_bool(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._bool)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_bool(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._bool))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_bool(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
@@ -216,8 +223,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // char
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_char(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._char)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_char(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._char))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_char(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
@@ -238,8 +245,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // uchar, unsigned char
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_uchar(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._uchar)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_uchar(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._uchar))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_uchar(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
@@ -260,8 +267,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // int8_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_int8_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._int8_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_int8_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._int8_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_int8_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
@@ -282,8 +289,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // uint8_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_uint8_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._uint8_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_uint8_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._uint8_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_uint8_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT8(ev, &(ARG), p, q))\
     {\
@@ -304,8 +311,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // int16_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_int16_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._int16_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_int16_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._int16_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_int16_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT16(ev, &(ARG), p, q))\
     {\
@@ -326,8 +333,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // uint16_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_uint16_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._uint16_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_uint16_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._uint16_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_uint16_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT16(ev, &(ARG), p, q))\
     {\
@@ -348,8 +355,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // int32_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_int32_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._int32_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_int32_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._int32_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_int32_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT32(ev, &(ARG), p, q))\
     {\
@@ -370,8 +377,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // uint32_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_uint32_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._uint32_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_uint32_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._uint32_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_uint32_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT32(ev, &(ARG), p, q))\
     {\
@@ -392,10 +399,10 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // time_t, from time.h
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_time_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._time_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_time_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._time_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_time_t(ASYNC, PREFIX, ARG) \
-    if (EV_GET_UINT64(ev, &(GET_FUNCTION_ARGUMENT(uint64_t, PREFIX)), p, q))  \
+    if (EV_GET_UINT64(ev, &GET_FUNCTION_ARGUMENT_SEQ(uint64_t, PREFIX), p, q))  \
     {\
         reply_data_error_string(desc, c->cmd, ASYNC != 0, \
                                 Error::decode_arguments);\
@@ -404,11 +411,11 @@ extern "C"
     }\
     if (sizeof(time_t) == 4)\
     {\
-        ARG = GET_FUNCTION_ARGUMENT(uint64_t, PREFIX) & 0xffffffff;\
+        ARG = GET_FUNCTION_ARGUMENT_SEQ(uint64_t, PREFIX) & 0xffffffff;\
     }\
     else \
     {\
-        ARG = GET_FUNCTION_ARGUMENT(uint64_t, PREFIX);\
+        ARG = GET_FUNCTION_ARGUMENT_SEQ(uint64_t, PREFIX);\
     }
 #define CREATE_FUNCTION_INPUT_PROCESS_TYPE_time_t(PREFIX, ARG) \
     BOOST_PP_EMPTY()
@@ -422,8 +429,8 @@ extern "C"
     BOOST_PP_EMPTY()
 
 // int64_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_int64_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._int64_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_int64_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._int64_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_int64_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
@@ -446,8 +453,8 @@ extern "C"
 #endif
 
 // uint64_t
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_uint64_t(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._uint64_t)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_uint64_t(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._uint64_t))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_uint64_t(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
@@ -470,8 +477,8 @@ extern "C"
 #endif
 
 // double
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_double(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._double)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_double(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._double))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_double(ASYNC, PREFIX, ARG) \
     if (EV_GET_UINT64(ev, &(ARG), p, q))\
     {\
@@ -493,10 +500,9 @@ extern "C"
 
 // pchar_len, (char *, length) handled as one parameter
 // (does not copy the Erlang data, but uses the reference count)
-#define GET_FUNCTION_ARGUMENT_FROM_TYPE_pchar_len(PREFIX) \
-    BOOST_PP_CAT(PREFIX, _._bin.ptr._char) \
-    BOOST_PP_COMMA() \
-    BOOST_PP_CAT(PREFIX, _._bin.length)
+#define GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_pchar_len(PREFIX) \
+    (BOOST_PP_CAT(PREFIX, _._bin.ptr._char)) \
+    (BOOST_PP_CAT(PREFIX, _._bin.length))
 #define CREATE_FUNCTION_INPUT_EV_STORE_TYPE_pchar_len(ASYNC, PREFIX, PTR, LEN) \
     if (EV_GET_UINT32(ev, &(LEN), p, q)) \
     {\
@@ -604,16 +610,22 @@ extern "C"
         CREATE_INVOKE_FUNCTION_RETURN_VALUE_PROCESSING_CODE_TYPE_, TYPE\
     )
 
-#define GET_FUNCTION_ARGUMENT(TYPE, PREFIX) \
+#define GET_FUNCTION_ARGUMENT_SEQ(TYPE, PREFIX) \
     BOOST_PP_CAT(\
-        GET_FUNCTION_ARGUMENT_FROM_TYPE_, TYPE\
+        GET_FUNCTION_ARGUMENT_SEQ_FROM_TYPE_, TYPE\
     )(PREFIX)
 
+#define GET_FUNCTION_ARGUMENTS(SEQ) \
+    BOOST_PP_TUPLE_REM_CTOR(\
+        BOOST_PP_SEQ_SIZE(SEQ),\
+        BOOST_PP_SEQ_TO_TUPLE(SEQ)\
+    )
+
 #define CREATE_INVOKE_FUNCTION_ARGUMENTS(Z, N, ARGUMENTS) \
-    GET_FUNCTION_ARGUMENT(\
+    GET_FUNCTION_ARGUMENTS(GET_FUNCTION_ARGUMENT_SEQ(\
         BOOST_PP_SEQ_ELEM(N, ARGUMENTS),\
         BOOST_PP_CAT(c->i.arg, N)\
-    )
+    ))
 
 #define CREATE_INVOKE_FUNCTION(I, DATA, FUNCTION) \
 static void BOOST_PP_CAT(invoke_, GET_NAME(FUNCTION)) (void * data) \
@@ -642,10 +654,10 @@ static void BOOST_PP_CAT(invoke_, GET_NAME(FUNCTION)) (void * data) \
 
 #define CREATE_FUNCTION_INPUT_ARGUMENT_HANDLING(R, FUNCTION, I, TYPE) \
     CREATE_FUNCTION_INPUT_EV_STORE(\
-        TYPE, (\
-            GET_ASYNC(FUNCTION),\
-            BOOST_PP_CAT(c->i.arg, I),\
-            GET_FUNCTION_ARGUMENT(TYPE, BOOST_PP_CAT(c->i.arg, I))\
+        TYPE, BOOST_PP_SEQ_TO_TUPLE(\
+            (GET_ASYNC(FUNCTION))\
+            (BOOST_PP_CAT(c->i.arg, I))\
+            GET_FUNCTION_ARGUMENT_SEQ(TYPE, BOOST_PP_CAT(c->i.arg, I))\
         )\
     )
 
@@ -656,9 +668,9 @@ static void BOOST_PP_CAT(invoke_, GET_NAME(FUNCTION)) (void * data) \
 
 #define CREATE_FUNCTION_INPUT_ARGUMENT_PROCESSING(R, DATA, I, TYPE) \
     CREATE_FUNCTION_INPUT_PROCESS(\
-        TYPE, (\
-            BOOST_PP_CAT(c->i.arg, I),\
-            GET_FUNCTION_ARGUMENT(TYPE, BOOST_PP_CAT(c->i.arg, I))\
+        TYPE, BOOST_PP_SEQ_TO_TUPLE(\
+            (BOOST_PP_CAT(c->i.arg, I))\
+            GET_FUNCTION_ARGUMENT_SEQ(TYPE, BOOST_PP_CAT(c->i.arg, I))\
         )\
     )
 
@@ -715,9 +727,9 @@ return;
 
 #define CREATE_FUNCTION_OUTPUT_ARGUMENT_PROCESSING(R, DATA, I, TYPE) \
     CREATE_FUNCTION_OUTPUT_PROCESS(\
-        TYPE, (\
-            BOOST_PP_CAT(c->i.arg, I),\
-            GET_FUNCTION_ARGUMENT(TYPE, BOOST_PP_CAT(c->i.arg, I))\
+        TYPE, BOOST_PP_SEQ_TO_TUPLE(\
+            (BOOST_PP_CAT(c->i.arg, I))\
+            GET_FUNCTION_ARGUMENT_SEQ(TYPE, BOOST_PP_CAT(c->i.arg, I))\
         )\
     )
 
@@ -1196,73 +1208,78 @@ static void driver_entry_outputv(ErlDrvData driver_data, ErlIOVec *ev)
 // provide port driver data to erlang interface
 
 static ErlDrvEntry driver_entry_functions = {
-    // init
+    // int(*init)(void)
     //
     // initialize global data
     driver_entry_init,
-    // start
+    // ErlDrvData(*start)(ErlDrvPort port, char *command)
     //
     // called when port is opened
     driver_entry_start,
-    // stop
+    // void(*stop)(ErlDrvData drv_data)
     //
     // called when port is closed
     driver_entry_stop,
-    // output
+    // void(*output)(ErlDrvData drv_data, char *buf, ErlDrvSizeT len)
     //
     // called when erlang has sent
     0,
-    // ready_input
+    // void(*ready_input)(ErlDrvData drv_data, ErlDrvEvent event)
     //
     // called when input descriptor ready
     0,
-    // ready_output
+    // void(*ready_output)(ErlDrvData drv_data, ErlDrvEvent event)
     //
     // called when output descriptor ready
     0,
-    // driver_name
+    // char * driver_name
     //
     // the argument to open_port
     const_cast<char *>(BOOST_PP_STRINGIZE(PORT_DRIVER_NAME)),
-    // finish
+    // void(*finish)(void)
     //
     // called when unloaded
     0,
-    // handle
+    // void * handle
     //
     // reserved -- used by emulator internally
     0,
-    // control
+    // ErlDrvSSizeT(*control)(ErlDrvData drv_data, unsigned int command,
+    //                        char *buf, ErlDrvSizeT len,
+    //                        char **rbuf, ErlDrvSizeT rlen)
     //
     // "ioctl" for drivers - invoked by port_control/3
     0,
-    // timeout
+    // void(*timeout)(ErlDrvData drv_data)
     //
     // handling of timeout in driver
     0,
-    // outputv
+    // void(*outputv)(ErlDrvData drv_data, ErlIOVec *ev)
     //
     // called when we have output from erlang to the port instead of output
     // if outputv is defined to handle vectorized erlang IO output (ErlIOVec)
     driver_entry_outputv,
-    // ready_async
+    // void(*ready_async)(ErlDrvData drv_data, ErlDrvThreadData thread_data)
     driver_entry_ready_async,
-    // flush
+    // void(*flush)(ErlDrvData drv_data)
     // 
     // called when the port is about to be closed, and
     // there is data in the driver queue that needs to be
     // flushed before ’stop’ can be called
     0,
-    // call
+    // ErlDrvSSizeT(*call)(ErlDrvData drv_data, unsigned int command,
+    //                     char *buf, ErlDrvSizeT len, char **rbuf,
+    //                     ErlDrvSizeT rlen, unsigned int *flags)
     //
     // Works mostly like ’control’, a synchronous call into the driver
     0,
-    // event
+    // void(*event)(ErlDrvData drv_data, ErlDrvEvent event,
+    //              ErlDrvEventData event_data)
     //
     // Called when an event selected by driver_event() has occurred
     0,
     // extended_marker
-    ERL_DRV_EXTENDED_MARKER,
+    static_cast<int>(ERL_DRV_EXTENDED_MARKER),
     // major_version
     ERL_DRV_EXTENDED_MAJOR_VERSION,
     // minor_version
@@ -1273,14 +1290,19 @@ static ErlDrvEntry driver_entry_functions = {
     //
     // reserved -- used by emulator internally
     0,
-    // process_exit
+    // void(*process_exit)(ErlDrvData drv_data, ErlDrvMonitor *monitor)
     //
     // Called when a process monitor fires
     0,
-    // stop_select
+    // void(*stop_select)(ErlDrvEvent event, void *reserved)
     //
     // Called after a driver_select event object can be safely closed
     0
+#ifdef ERLANG_19_SUPPORT
+    ,
+    // void(*emergency_close)(ErlDrvData drv_data)
+    0
+#endif
 };
 
 extern "C" DRIVER_INIT(PORT_DRIVER_NAME)
