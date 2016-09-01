@@ -30,8 +30,6 @@ test_functions_port_vsn_1_CPPFLAGS = \
 test_functions_port_vsn_1_LDADD = -lei
 test_functions_port_vsn_1_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
 
-# no symbols need to be linked, since the Erlang VM already has the
-# necessary functions
 test_functions_port_driver_vsn_1_la_SOURCES = test_functions.c \
                                               port_driver.cpp 
 test_functions_port_driver_vsn_1_la_CPPFLAGS = \
@@ -40,7 +38,6 @@ test_functions_port_driver_vsn_1_la_CPPFLAGS = \
  -include $(srcdir)/test_bindings.h $(CXXFLAGS) \
  -Wno-unused-function -save-temps
 test_functions_port_driver_vsn_1_la_LDFLAGS = -module -avoid-version
-# -export-symbols-regex '(libcloudi_socket_drv|nif_init|on_load|on_unload)'
 
 .erl.beam:
 	@ERLC@ -b beam $(ERLC_OPTS) -o $@ $<
