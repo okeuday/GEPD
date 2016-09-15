@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# This was an old ad-hoc way to build, consider using cmake or autoconf
+
 ERLANG_INSTALL=/usr/local
 ERTS_PATH=$ERLANG_INSTALL/lib/erlang/erts-5.10.1
 ERL_INTERFACE_PATH=$ERLANG_INSTALL/lib/erlang/lib/erl_interface-3.7.11

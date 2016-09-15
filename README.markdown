@@ -58,10 +58,12 @@ To build with cmake:
     cmake ..
     make
 
-To build with the make script:
+To build with autoconf:
 
-    ./make.sh
-
+    ./autogen.sh
+    ./configure
+    make
+    make install
 
 ## RUNNING
 
