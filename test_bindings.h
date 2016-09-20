@@ -38,7 +38,6 @@
 // specify all the functions to generate bindings for
 //  __________________________________________________________________________
 //  || FUNCTION     || ARITY/TYPES             || RETURN TYPE || ASYNC CALL ||
-/*
 #define PORT_DRIVER_FUNCTIONS \
     ((sleep_test1,     1, (uint32_t),             void,                   0)) \
     ((sleep_test2,     1, (uint32_t),             void,                   1)) \
@@ -57,22 +56,6 @@
                            pchar_len, char,                                   \
                            pchar_len, char),      pchar_nofree,           0)) \
     ((hello_test1,     0, (),                     pchar_len_t_free,       0))
-*/
-#define PORT_DRIVER_FUNCTIONS \
-    ((sleep_test1,     1, (uint32_t),             void,                   0)) \
-    ((sleep_test2,     1, (uint32_t),             void,                   1)) \
-    ((char_test1,      1, (char),                 char,                   0)) \
-    ((char_test2,      1, (uchar),                uchar,                  0)) \
-    ((pchar_test1,     1, (pchar_len),            pchar_nofree,           0)) \
-    ((time_test1,      1, (time_t),               pchar_nofree,           0)) \
-    ((float_test2,     1, (double),               float,                  0)) \
-    ((integer_test2,   4, (int8_t, int16_t,                                   \
-                           int32_t, int64_t),     int32_t,                0)) \
-    ((integer_test3,   4, (uint8_t, uint16_t,                                 \
-                           uint32_t, uint64_t),   uint32_t,               0)) \
-    ((pchar_test2,     6, (pchar_len, char,                                   \
-                           pchar_len, char,                                   \
-                           pchar_len, char),      pchar_nofree,           0))
 
 //////////////////////////////////////////////////////////////////////////////
 // Port Declaration

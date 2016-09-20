@@ -64,7 +64,9 @@ typedef int ErlDrvSSizeT;
 
 #include <boost/preprocessor/tuple/rem.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/tuple/to_seq.hpp>
+//#include <boost/preprocessor/tuple/to_seq.hpp> // broken with boost >= 1.5?
+#include <boost/preprocessor/tuple/to_list.hpp>
+#include <boost/preprocessor/list/for_each.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
 #include <boost/preprocessor/seq/to_tuple.hpp>
@@ -80,6 +82,11 @@ typedef int ErlDrvSSizeT;
 #include <boost/preprocessor/punctuation/paren.hpp>
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/cat.hpp>
+
+// work-around instead of BOOST_PP_TUPLE_TO_SEQ to correctly handle arity 0
+#define TUPLE_TO_SEQ_E(r, data, elem) (elem)
+#define TUPLE_TO_SEQ(I, T) \
+    BOOST_PP_LIST_FOR_EACH(TUPLE_TO_SEQ_E, _, BOOST_PP_TUPLE_TO_LIST(I, T))
 
 #include "pchar_len_t.h"
 
@@ -637,7 +644,7 @@ static void BOOST_PP_CAT(invoke_, GET_NAME(FUNCTION)) (void * data) \
     BOOST_PP_ENUM( \
         GET_ARGC(FUNCTION), \
         CREATE_INVOKE_FUNCTION_ARGUMENTS, \
-        BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)) \
+        TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)) \
     ) \
     BOOST_PP_RPAREN() \
     ; \
@@ -694,11 +701,11 @@ case BOOST_PP_DEC(I):\
     c->invoke = BOOST_PP_CAT(invoke_, GET_NAME(FUNCTION)); \
     BOOST_PP_SEQ_FOR_EACH_I(\
         CREATE_FUNCTION_INPUT_ARGUMENT_HANDLING, FUNCTION,\
-        BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
+        TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
     )\
     BOOST_PP_SEQ_FOR_EACH_I(\
         CREATE_FUNCTION_INPUT_ARGUMENT_PROCESSING, _,\
-        BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
+        TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
     )\
     BOOST_PP_IF(\
         GET_ASYNC(FUNCTION),\
@@ -740,7 +747,7 @@ case BOOST_PP_DEC(I):\
     )\
     BOOST_PP_SEQ_FOR_EACH_I(\
         CREATE_FUNCTION_OUTPUT_ARGUMENT_PROCESSING, _,\
-        BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
+        TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION))\
     )\
     BOOST_PP_IF(GET_ASYNC(FUNCTION), driver_free(c); , BOOST_PP_EMPTY())\
     return;
