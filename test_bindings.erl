@@ -6,7 +6,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -75,7 +75,8 @@ test() ->
     end,
     io:format("...~n", []),
     {ok, 18446744073709551615} = test_bindings:integer_test1(?MODULE),
-    {ok,  -1} = test_bindings:char_test1(?MODULE, -1),
+    {ok, CharTest1} = test_bindings:char_test1(?MODULE, -1),
+    true = (CharTest1 =:= -1) orelse (CharTest1 =:= 255), % standard ambiguous
     {ok, 255} = test_bindings:char_test2(?MODULE, -1),
     {ok, F1} = test_bindings:float_test1(?MODULE),
     true = F1 < 3.0e-8,
