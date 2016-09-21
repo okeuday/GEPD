@@ -1,4 +1,4 @@
-#GENERIC ERLANG PORT \[DRIVER\] (GEP[D]), VERSION 0.9.5 (August 31 2016)
+#GENERIC ERLANG PORT \[DRIVER\] (GEP[D])
 
 ## PURPOSE
 
@@ -51,14 +51,7 @@ Some of the features in `port_driver.cpp` requires
 Boost is required for the preprocessor macro expansion code
 ([http://www.boost.org/](http://www.boost.org/)).
 
-To build with cmake:
-
-    mkdir build
-    cd build
-    cmake ..
-    make
-
-To build with autoconf:
+To build, use:
 
     ./autogen.sh
     ./configure

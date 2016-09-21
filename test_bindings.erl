@@ -1,9 +1,10 @@
 %%% -*- Mode: erlang; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 %%% ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
-
-%%% GENERIC ERLANG PORT [DRIVER] VERSION 0.8
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% GENERIC ERLANG PORT [DRIVER]
+%%% automatically create Erlang bindings to C++/C that requires an OS process
+%%%
 %%% BSD LICENSE
 %%% 
 %%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
