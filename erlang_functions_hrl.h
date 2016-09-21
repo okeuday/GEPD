@@ -239,13 +239,16 @@ BOOST_PP_ENUM(BOOST_PP_SEQ_SIZE(FUNCTIONS_SEQUENCE),
 
 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION, _, FUNCTIONS_SEQUENCE)
 
-encode_uint8(Value) when erlang:is_list(Value) ->
+encode_uint8(Value) when is_binary(Value) ->
+    DataSize = erlang:byte_size(Value),
+    <<DataSize:32/unsigned-integer-native, Value/binary>>;
+encode_uint8(Value) when is_list(Value) ->
     ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
-    DataSize = erlang:length(ValueList),
+    DataSize = length(ValueList),
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 
-encode_uint32(Value) when erlang:is_list(Value) ->
+encode_uint32(Value) when is_list(Value) ->
     ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
     DataSize = erlang:length(ValueList),
