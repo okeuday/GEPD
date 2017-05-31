@@ -1,4 +1,4 @@
-#GENERIC ERLANG PORT \[DRIVER\] (GEP[D])
+# GENERIC ERLANG PORT \[DRIVER\] (GEP[D])
 
 ## PURPOSE
 
@@ -82,7 +82,7 @@ The `test_bindings` code should generate output similar to:
 
 ## LICENSE
 
-BSD license
+MIT License
 
 
 ## CONTACT
