@@ -1,7 +1,7 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-AC_INIT([GEPD], [0.9.5], [mjtruog at gmail dot com],
+AC_INIT([GEPD], [0.9.5], [mjtruog at protonmail dot com],
         [GEPD], [https://github.com/okeuday/GEPD])
 
 # paths to check for installations that are not standard but typically used
