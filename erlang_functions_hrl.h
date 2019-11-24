@@ -231,12 +231,12 @@ encode_uint8(Value) when is_binary(Value) ->
 encode_uint8(Value) when is_list(Value) ->
     ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
-    DataSize = length(ValueList),
+    DataSize = erlang:byte_size(Data),
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 
 encode_uint32(Value) when is_list(Value) ->
     ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
-    DataSize = erlang:length(ValueList),
+    DataSize = erlang:byte_size(Data) div 4,
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 
