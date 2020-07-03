@@ -46,8 +46,7 @@ operation would create instability after a hot code update.
 
 ## BUILDING
 
-Some of the features in `port_driver.cpp` requires
-`erts >= 5.6.1` (`Erlang >= R12B01`).
+`Erlang/OTP >= R14A` is required.
 Boost is required for the preprocessor macro expansion code
 ([http://www.boost.org/](http://www.boost.org/)).
 

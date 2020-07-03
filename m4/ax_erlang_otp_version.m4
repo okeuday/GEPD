@@ -14,6 +14,7 @@
 #   AX_ERLANG_SUBST_OTP_VER sets:
 #
 #     ERLANG_OTP_VER (e.g., "17.1-rc0")
+#     ERLANG_OTP_VER_MAJOR_MINOR (e.g., "17_1")
 #     ERLANG_OTP_VER_MAJOR (e.g., "17")
 #     ERLANG_OTP_VER_MINOR (e.g., "1")
 #     ERLANG_OTP_VER_PATCH (e.g., "")
@@ -21,10 +22,13 @@
 #
 #   For backwards compatability the script also handles pre 17.0 versions:
 #     ERLANG_OTP_VER (e.g., "R14B01")
+#     ERLANG_OTP_VER_MAJOR_MINOR (e.g., "14_01")
 #     ERLANG_OTP_VER_MAJOR (e.g., "14")
 #     ERLANG_OTP_VER_MINOR (e.g., "01")
 #     ERLANG_OTP_VER_PATCH (e.g., "")
 #     ERLANG_OTP_VER_RELEASE_CANDIDATE (e.g., "")
+#
+#   R14A or later is required due to binary module use.
 #
 #   WARNING: After the 17.0 Erlang/OTP release, both
 #            ERLANG_OTP_VER_MINOR and ERLANG_OTP_VER_RELEASE_CANDIDATE will be
@@ -93,8 +97,7 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
         ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]*\.\([[0-9]]*\)'`
         ax_erlang_otp_ver_patch=`expr $ax_cv_erlang_otp_package_ver : '[[0-9]]*\.[[0-9]]*.\([[0-9]]*\)'`
         ax_erlang_otp_ver_release_candidate=`expr $ax_cv_erlang_otp_package_ver : '.*-rc\([[0-8]]\)'`
-        AC_SUBST([ERLANG_OTP_VER],
-                 ["${ax_erlang_otp_ver_major}_${ax_erlang_otp_ver_minor}"])
+        AC_SUBST([ERLANG_OTP_VER], [$ax_cv_erlang_otp_package_ver])
     else
         ax_erlang_otp_ver_minor=`expr $ax_cv_erlang_otp_ver : 'R[[0-9]]*[[AB]]\([[0-9]]*\)'`
         ax_erlang_otp_ver_patch=""
@@ -106,9 +109,10 @@ AC_DEFUN([AX_ERLANG_SUBST_OTP_VER],
         else
             AC_MSG_FAILURE([invalid version])
         fi
-        AC_SUBST([ERLANG_OTP_VER],
-                 ["${ax_erlang_otp_ver_major}${ax_erlang_otp_ver_type}${ax_erlang_otp_ver_minor}"])
+        AC_SUBST([ERLANG_OTP_VER], [$ax_cv_erlang_otp_ver])
     fi
+    AC_SUBST([ERLANG_OTP_VER_MAJOR_MINOR],
+             ["${ax_erlang_otp_ver_major}_${ax_erlang_otp_ver_minor}"])
     AC_SUBST([ERLANG_OTP_VER_MAJOR], [$ax_erlang_otp_ver_major])
     AC_SUBST([ERLANG_OTP_VER_MINOR], [$ax_erlang_otp_ver_minor])
     AC_SUBST([ERLANG_OTP_VER_PATCH], [$ax_erlang_otp_ver_patch])
@@ -163,8 +167,9 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                             0;
                         true ->
                             %% Remove -1 from R16B03-1
-                            [[MinorL | _]] = string:tokens(MinorT, "-"),
-                            list_to_integer(MinorL)
+                            list_to_integer(lists:takewhile(fun(C) ->
+                                C /= \$-
+                            end, MinorT))
                     end,
                     if
                         T1 == \$B ->
@@ -194,7 +199,11 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                                     Major ++ ".0.0"
                             end
                     end,
-                    [[_, Minor | RCString]] = string:tokens(Package, ".-"),
+                    [[_, MinorBin |
+                      RCStringBin]] = binary:split(list_to_binary(Package),
+                                                   [[<<".">>, <<"-">>]],
+                                                   [[global]]),
+                    RCString = [[binary_to_list(B) || B <- RCStringBin]],
                     {Patch1, Patch2} = case RCString of
                         [["rc" ++ RCStr | _]] ->
                             {"0", RCStr};
@@ -208,7 +217,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                             {"0", "0"}
                     end,
                     list_to_integer(Major) * 1000000 +
-                    list_to_integer(Minor) * 1000 +
+                    list_to_integer(binary_to_list(MinorBin)) * 1000 +
                     list_to_integer(Patch1) * 10 +
                     list_to_integer(Patch2)
             end,
