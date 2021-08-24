@@ -46,7 +46,7 @@
 -include("erlang_functions.hrl").
 
 % testing port driver by default, uncomment to test port
-%-undef(ERL_PORT_DRIVER_NAME).
+-undef(ERL_PORT_DRIVER_NAME).
 
 -record(state, {last_port_name,
                 replies = [],

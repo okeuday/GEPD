@@ -111,12 +111,9 @@ typedef int ErlDrvSSizeT;
 
 // 64bit return values are only possible on 64bit machines
 // because of the types ErlDrvSInt and ErlDrvUInt
-#define NATIVE_64BIT_TYPES (   defined(__alpha__)                            \
-                            || defined(__ia64__)                             \
-                            || defined(__ppc64__)                            \
-                            || defined(__s390x__)                            \
-                            || defined(__x86_64__)                           \
-                            || defined(__aarch64__))
+#if INTPTR_MAX >= INT64_MAX
+#define NATIVE_64BIT_TYPES 1
+#endif
 
 // define the structure of the PORT_DRIVER_FUNCTIONS macro data
 // (sequence of tuples)
@@ -436,7 +433,7 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_FUNCTION_OUTPUT_PROCESS_TYPE_int64_t(PREFIX, ARG) \
     BOOST_PP_EMPTY()
-#if NATIVE_64BIT_TYPES
+#ifdef NATIVE_64BIT_TYPES
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_int64_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, int64_t) =
 #define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_int64_t(CMD, ASYNC, PREFIX) \
@@ -460,7 +457,7 @@ extern "C"
     BOOST_PP_EMPTY()
 #define CREATE_FUNCTION_OUTPUT_PROCESS_TYPE_uint64_t(PREFIX, ARG) \
     BOOST_PP_EMPTY()
-#if NATIVE_64BIT_TYPES
+#ifdef NATIVE_64BIT_TYPES
 #define CREATE_INVOKE_FUNCTION_RETURN_VALUE_STORE_TYPE_uint64_t(PREFIX) \
     BOOST_PP_CAT(PREFIX, uint64_t) =
 #define CREATE_FUNCTION_OUTPUT_RETURN_VALUE_TYPE_uint64_t(CMD, ASYNC, PREFIX) \
@@ -990,7 +987,7 @@ CREATE_REPLY_OK_INTEGER(int16_t,  ERL_DRV_INT)
 CREATE_REPLY_OK_INTEGER(uint16_t, ERL_DRV_UINT)
 CREATE_REPLY_OK_INTEGER(int32_t,  ERL_DRV_INT)
 CREATE_REPLY_OK_INTEGER(uint32_t, ERL_DRV_UINT)
-#if NATIVE_64BIT_TYPES
+#ifdef NATIVE_64BIT_TYPES
 CREATE_REPLY_OK_INTEGER(int64_t,  ERL_DRV_INT)
 CREATE_REPLY_OK_INTEGER(uint64_t, ERL_DRV_UINT)
 #endif

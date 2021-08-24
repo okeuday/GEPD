@@ -30,8 +30,8 @@ AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 
 # C++ requirements
-AX_BOOST_BASE([1.36], ,
-    [AC_MSG_ERROR([Boost >= 1.36 not found, see http://boost.org/])])
+AX_BOOST_BASE([1.40], ,
+    [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
     $PATHS_NONSYSTEM_INC)
@@ -39,7 +39,7 @@ AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AX_ERLANG_REQUIRE_OTP_VER([R12B01], ,
+AX_ERLANG_REQUIRE_OTP_VER([R14], ,
     [AC_MSG_ERROR([Erlang >= R12B01 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
